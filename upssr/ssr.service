@@ -1,0 +1,17 @@
+[Unit]
+Description=Shadowsocks local Services
+After=syslog.target
+After=network.target
+
+[Service]
+Type=simple
+User=core
+Group=users
+Restart=always
+WorkingDirectory=/home/core
+ExecStart=/home/core/Applications/bin/ssr -c ss://AES-256-CFB:password@ssr.exmaple.com:10800 -redir :10801 -redir6 :10802  -socks :10803 -verbose
+Restart=always
+Environment=USER=core HOME=/home/core
+
+[Install]
+WantedBy=multi-user.target
