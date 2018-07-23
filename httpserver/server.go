@@ -94,6 +94,12 @@ func httpInfo(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	resp, _ := json.Marshal(req)
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(resp)
+
+	if strings.HasSuffix(r.URL.Path,".html") {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		fmt.Fprintf(w, "<html><h1>%s</h1><div>%s</div></html>", "Resp Body", string(resp))
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(resp)
+	}
 }
