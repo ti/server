@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	port = flag.Int("p", 8090, "port to listen")
+	port = flag.Int("p", 8080, "port to listen")
 	dir  = flag.String("d", "./", "dir to server")
 )
 
