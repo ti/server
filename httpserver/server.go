@@ -39,9 +39,9 @@ func httpInfo(w http.ResponseWriter, r *http.Request) {
 	req := make(map[string]interface{})
 	type URL struct {
 		Scheme   string
-		RawQuery string
 		Path     string
 		Host     string
+		RawQuery string `json:"RawQuery,omitempty"`
 		Query    interface{} `json:"Query,omitempty"`
 		User     interface{} `json:"User,omitempty"`
 	}
