@@ -45,7 +45,9 @@ func httpInfo(w http.ResponseWriter, r *http.Request) {
 		Query    interface{} `json:"Query,omitempty"`
 		User     interface{} `json:"User,omitempty"`
 	}
-	u := URL{Scheme: r.URL.Scheme, RawQuery: r.URL.RawQuery, Path: r.URL.Path, Host: r.Host}
+	lenFix := len("/_info")
+	reqUrlPath:= r.URL.Path[lenFix:]
+	u := URL{Scheme: r.URL.Scheme, RawQuery: r.URL.RawQuery, Path: reqUrlPath, Host: r.Host}
 	if q := r.URL.Query(); len(q) > 0 {
 		u.Query = q
 	}
@@ -64,7 +66,7 @@ func httpInfo(w http.ResponseWriter, r *http.Request) {
 	req["Method"] = r.Method
 	req["URL"] = u
 	req["Header"] = r.Header
-	req["RequestURI"] = r.RequestURI
+	req["RequestURI"] = r.RequestURI[lenFix:]
 	if r.TLS != nil {
 		req["TLS"] = r.TLS
 	}
@@ -93,11 +95,10 @@ func httpInfo(w http.ResponseWriter, r *http.Request) {
 
 		}
 	}
-	resp, _ := json.Marshal(req)
-
+	resp, _ := json.MarshalIndent(req,"","\t")
 	if strings.HasSuffix(r.URL.Path,".html") {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprintf(w, "<html><h1>%s</h1><div>%s</div></html>", "Resp Body", string(resp))
+		fmt.Fprintf(w, "<html><head><title>%s</title><head/><h1>%s</h1><pre>%s</pre></html>", "Request Infos", "Request Infos", string(resp))
 	} else {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(resp)
