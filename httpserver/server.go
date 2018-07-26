@@ -51,9 +51,10 @@ type url struct {
 type request struct {
 	Method        string               `json:"method,omitempty"`
 	RequestURI    string               `json:"request_uri,omitempty"`
-	RemoteAddr    string               `json:"remote_addr,omitempty"`
+	RemoteIP      string               `json:"remote_ip,omitempty"`
 	Body          interface{}          `json:"body,omitempty"`
 	Meta          *map[string]string   `json:"meta,omitempty"`
+	RemoteAddr    string               `json:"remote_addr,omitempty"`
 	Proto         string               `json:"proto,omitempty"`
 	Host          string               `json:"host,omitempty"`
 	URL           url                  `json:"url,omitempty"`
@@ -120,6 +121,7 @@ func httpInfo(w http.ResponseWriter, r *http.Request) {
 		jsonBytes, _ := json.Marshal(req)
 		log.Println(string(jsonBytes))
 	}
+	req.RemoteIP = getIP(r).String()
 	if len(meta) > 0 {
 		req.Meta = &meta
 	}
@@ -131,4 +133,22 @@ func httpInfo(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(resp)
 	}
+}
+
+func getIP(r *http.Request) net.IP {
+	if ip := r.Header.Get("X-Forwarded-For"); ip != "" {
+		parts := strings.Split(ip, ",")
+		for i, part := range parts {
+			parts[i] = strings.TrimSpace(part)
+		}
+		return net.ParseIP(parts[0])
+	}
+	if ip := r.Header.Get("X-Real-IP"); ip != "" {
+		return net.ParseIP(ip)
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return net.ParseIP(r.RemoteAddr)
+	}
+	return net.ParseIP(host)
 }
