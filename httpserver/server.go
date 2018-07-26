@@ -1,18 +1,22 @@
 package main
 
 import (
+	"crypto/tls"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/clbanning/mxj"
+	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"strings"
-	"io/ioutil"
-	"encoding/json"
 )
 
 var (
-	port = flag.Int("p", 8080, "port to listen")
-	dir  = flag.String("d", "./", "dir to server")
+	port    = flag.Int("p", 8080, "port to listen")
+	logBody = flag.Bool("l", false, "write http body log on std out")
+	dir     = flag.String("d", "./", "dir to server")
 )
 
 func main() {
@@ -35,19 +39,33 @@ func main() {
 	panic(http.Serve(listener, nil))
 }
 
+type url struct {
+	Scheme   string
+	Path     string
+	Host     string
+	RawQuery string      `json:"RawQuery,omitempty"`
+	Query    interface{} `json:"Query,omitempty"`
+	User     interface{} `json:"User,omitempty"`
+}
+
+type request struct {
+	Method        string               `json:"method,omitempty"`
+	RequestURI    string               `json:"request_uri,omitempty"`
+	RemoteAddr    string               `json:"remote_addr,omitempty"`
+	Body          interface{}          `json:"body,omitempty"`
+	Meta          *map[string]string   `json:"meta,omitempty"`
+	Proto         string               `json:"proto,omitempty"`
+	Host          string               `json:"host,omitempty"`
+	URL           url                  `json:"url,omitempty"`
+	Header        http.Header          `json:"header,omitempty"`
+	TLS           *tls.ConnectionState `json:"tls,omitempty"`
+	ContentLength int64                `json:"content_length,omitempty"`
+}
+
 func httpInfo(w http.ResponseWriter, r *http.Request) {
-	req := make(map[string]interface{})
-	type URL struct {
-		Scheme   string
-		Path     string
-		Host     string
-		RawQuery string `json:"RawQuery,omitempty"`
-		Query    interface{} `json:"Query,omitempty"`
-		User     interface{} `json:"User,omitempty"`
-	}
 	lenFix := len("/_info")
-	reqUrlPath:= r.URL.Path[lenFix:]
-	u := URL{Scheme: r.URL.Scheme, RawQuery: r.URL.RawQuery, Path: reqUrlPath, Host: r.Host}
+	reqUrlPath := r.URL.Path[lenFix:]
+	u := url{Scheme: r.URL.Scheme, RawQuery: r.URL.RawQuery, Path: reqUrlPath, Host: r.Host}
 	if q := r.URL.Query(); len(q) > 0 {
 		u.Query = q
 	}
@@ -62,41 +80,51 @@ func httpInfo(w http.ResponseWriter, r *http.Request) {
 			user, pass,
 		}
 	}
-	req["Host"] = r.Host
-	req["Method"] = r.Method
-	req["URL"] = u
-	req["Header"] = r.Header
-	req["RequestURI"] = r.RequestURI[lenFix:]
-	if r.TLS != nil {
-		req["TLS"] = r.TLS
-	}
-	req["RemoteAddr"] = r.RemoteAddr
-	req["Proto"] = r.Proto
-	if r.ContentLength > 0 {
-		req["ContentLength"] = r.ContentLength
-	}
+	var req request
+	var meta = make(map[string]string)
+	req.Host = r.Host
+	req.Method = r.Method
+	req.URL = u
+	req.Header = r.Header
+	req.RequestURI = r.RequestURI[lenFix:]
+	req.TLS = r.TLS
+	req.RemoteAddr = r.RemoteAddr
+	req.Proto = r.Proto
+	req.ContentLength = r.ContentLength
 	contentType := r.Header.Get("Content-Type")
 	if strings.Contains(contentType, "json") {
 		var data interface{}
 		dec := json.NewDecoder(r.Body)
-		if err := dec.Decode(&data); err != nil {
-			req["Body"] = data
+		if err := dec.Decode(&data); err == nil {
+			req.Body = data
+		} else {
+			meta["error"] = fmt.Sprintf("json decode error - %s", err)
 		}
 	} else if strings.Contains(contentType, "form") {
 		r.ParseForm()
-		req["Body"] = r.PostForm
+		req.Body = r.PostForm
+	} else if strings.Contains(contentType, "xml") {
+		b, _ := ioutil.ReadAll(r.Body)
+		data, err := mxj.NewMapXml(b)
+		if err == nil {
+			req.Body = data
+		} else {
+			meta["error"] = fmt.Sprintf("xml decode error - %s", err)
+		}
 	} else {
 		if b, _ := ioutil.ReadAll(r.Body); len(b) > 0 {
-			req["Body"] = string(b)
+			req.Body = string(b)
 		}
 	}
-	if b, _ := ioutil.ReadAll(r.Body); len(b) > 0 {
-		if strings.Contains(contentType, "json") {
-
-		}
+	if *logBody {
+		jsonBytes, _ := json.Marshal(req)
+		log.Println(string(jsonBytes))
 	}
-	resp, _ := json.MarshalIndent(req,"","\t")
-	if strings.HasSuffix(r.URL.Path,".html") {
+	if len(meta) > 0 {
+		req.Meta = &meta
+	}
+	resp, _ := json.MarshalIndent(req, "", "\t")
+	if strings.HasSuffix(r.URL.Path, ".html") {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		fmt.Fprintf(w, "<html><head><title>%s</title><head/><h1>%s</h1><pre>%s</pre></html>", "Request Infos", "Request Infos", string(resp))
 	} else {
