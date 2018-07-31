@@ -15,8 +15,6 @@ import (
 	"bytes"
 )
 
-const version = "1.0.0.0724"
-
 var addr = flag.String("addr", ":5080", "addr to serve on")
 var uri = flag.String("uri", "etcd://127.0.0.1:2379", "etcd server")
 var pretty = flag.Bool("pretty", false, "pretty print the out put?")
@@ -56,8 +54,8 @@ func etcdPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	isJson := false
-	if bytes.HasPrefix(body, []byte("{")) {
-		var data map[string]interface{}
+	if len(body) > 0 && (body[0] == byte('{') || body[0] == byte('[')) {
+		var data interface{}
 		decoder := json.NewDecoder(bytes.NewReader(body))
 		if err := decoder.Decode(&data); err != nil {
 			http.Error(w, "JSON decode error: "+err.Error(), 400)
@@ -112,8 +110,8 @@ func ectd(w http.ResponseWriter, r *http.Request) {
 	for _, v := range resp.Kvs {
 		key := string(v.Key)
 		value := string(v.Value)
-		if strings.HasPrefix(value, "{") {
-			data := make(map[string]interface{})
+		if len(v.Value) > 0 && (v.Value[0] == byte('{') || v.Value[0] == byte('[')) {
+			var data interface{}
 			if err := json.Unmarshal(v.Value, &data); err == nil {
 				result[key] = data
 				isJson = true
