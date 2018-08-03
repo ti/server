@@ -93,7 +93,8 @@ func httpInfo(w http.ResponseWriter, r *http.Request) {
 	req.RemoteAddr = r.RemoteAddr
 	req.Proto = r.Proto
 	req.ContentLength = r.ContentLength
-	if !*decodeBody {
+	_, decode := r.URL.Query()["decode_body"]
+	if !*decodeBody || decode {
 		if b, _ := ioutil.ReadAll(r.Body); len(b) > 0 {
 			req.Body = string(b)
 		}
