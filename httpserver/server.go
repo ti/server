@@ -14,9 +14,10 @@ import (
 )
 
 var (
-	port    = flag.Int("p", 8080, "port to listen")
-	logBody = flag.Bool("l", false, "write http body log on std out")
-	dir     = flag.String("d", "./", "dir to server")
+	port       = flag.Int("p", 8080, "port to listen")
+	logBody    = flag.Bool("l", false, "write http body log on std out")
+	dir        = flag.String("d", "./", "dir to server")
+	decodeBody = flag.Bool("b", false, "decode as struct")
 )
 
 func main() {
@@ -65,8 +66,8 @@ type request struct {
 
 func httpInfo(w http.ResponseWriter, r *http.Request) {
 	lenFix := len("/_info")
-	reqUrlPath := r.URL.Path[lenFix:]
-	u := url{Scheme: r.URL.Scheme, RawQuery: r.URL.RawQuery, Path: reqUrlPath, Host: r.Host}
+	reqURLPath := r.URL.Path[lenFix:]
+	u := url{Scheme: r.URL.Scheme, RawQuery: r.URL.RawQuery, Path: reqURLPath, Host: r.Host}
 	if q := r.URL.Query(); len(q) > 0 {
 		u.Query = q
 	}
@@ -92,29 +93,35 @@ func httpInfo(w http.ResponseWriter, r *http.Request) {
 	req.RemoteAddr = r.RemoteAddr
 	req.Proto = r.Proto
 	req.ContentLength = r.ContentLength
-	contentType := r.Header.Get("Content-Type")
-	if strings.Contains(contentType, "json") {
-		var data interface{}
-		dec := json.NewDecoder(r.Body)
-		if err := dec.Decode(&data); err == nil {
-			req.Body = data
-		} else {
-			meta["error"] = fmt.Sprintf("json decode error - %s", err)
-		}
-	} else if strings.Contains(contentType, "form") {
-		r.ParseForm()
-		req.Body = r.PostForm
-	} else if strings.Contains(contentType, "xml") {
-		b, _ := ioutil.ReadAll(r.Body)
-		data, err := mxj.NewMapXml(b)
-		if err == nil {
-			req.Body = data
-		} else {
-			meta["error"] = fmt.Sprintf("xml decode error - %s", err)
-		}
-	} else {
+	if !*decodeBody {
 		if b, _ := ioutil.ReadAll(r.Body); len(b) > 0 {
 			req.Body = string(b)
+		}
+	} else {
+		contentType := r.Header.Get("Content-Type")
+		if *decodeBody && strings.Contains(contentType, "json") {
+			var data interface{}
+			dec := json.NewDecoder(r.Body)
+			if err := dec.Decode(&data); err == nil {
+				req.Body = data
+			} else {
+				meta["error"] = fmt.Sprintf("json decode error - %s", err)
+			}
+		} else if strings.Contains(contentType, "form") {
+			r.ParseForm()
+			req.Body = r.PostForm
+		} else if strings.Contains(contentType, "xml") {
+			b, _ := ioutil.ReadAll(r.Body)
+			data, err := mxj.NewMapXml(b)
+			if err == nil {
+				req.Body = data
+			} else {
+				meta["error"] = fmt.Sprintf("xml decode error - %s", err)
+			}
+		} else {
+			if b, _ := ioutil.ReadAll(r.Body); len(b) > 0 {
+				req.Body = string(b)
+			}
 		}
 	}
 	if *logBody {
