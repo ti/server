@@ -35,8 +35,7 @@ func main() {
 		}
 	}
 	fmt.Println("Hit CTRL-C to stop the server")
-	http.Handle("/_info/", http.HandlerFunc(httpInfo))
-	http.Handle("/", http.FileServer(http.Dir(*dir)))
+	http.Handle("/_info/", http.StripPrefix("/_info", http.HandlerFunc(httpInfo)))
 	panic(http.Serve(listener, nil))
 }
 
@@ -65,9 +64,7 @@ type request struct {
 }
 
 func httpInfo(w http.ResponseWriter, r *http.Request) {
-	lenFix := len("/_info")
-	reqURLPath := r.URL.Path[lenFix:]
-	u := url{Scheme: r.URL.Scheme, RawQuery: r.URL.RawQuery, Path: reqURLPath, Host: r.Host}
+	u := url{Scheme: r.URL.Scheme, RawQuery: r.URL.RawQuery, Path: r.URL.Path, Host: r.Host}
 	if q := r.URL.Query(); len(q) > 0 {
 		u.Query = q
 	}
@@ -88,7 +85,7 @@ func httpInfo(w http.ResponseWriter, r *http.Request) {
 	req.Method = r.Method
 	req.URL = u
 	req.Header = r.Header
-	req.RequestURI = r.RequestURI[lenFix:]
+	req.RequestURI = r.RequestURI
 	req.TLS = r.TLS
 	req.RemoteAddr = r.RemoteAddr
 	req.Proto = r.Proto
