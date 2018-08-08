@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"github.com/clbanning/mxj"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"strings"
+	"time"
 )
 
 var (
@@ -36,6 +36,7 @@ func main() {
 	}
 	fmt.Println("Hit CTRL-C to stop the server")
 	http.Handle("/_info/", http.StripPrefix("/_info", http.HandlerFunc(httpInfo)))
+	http.Handle("/", http.FileServer(http.Dir(*dir)))
 	panic(http.Serve(listener, nil))
 }
 
@@ -49,6 +50,7 @@ type url struct {
 }
 
 type request struct {
+	Time          string               `json:"time"`
 	Method        string               `json:"method,omitempty"`
 	RequestURI    string               `json:"request_uri,omitempty"`
 	RemoteIP      string               `json:"remote_ip,omitempty"`
@@ -79,7 +81,7 @@ func httpInfo(w http.ResponseWriter, r *http.Request) {
 			user, pass,
 		}
 	}
-	var req request
+	req := request{Time: time.Now().Format(time.RFC3339)}
 	var meta = make(map[string]string)
 	req.Host = r.Host
 	req.Method = r.Method
@@ -124,7 +126,7 @@ func httpInfo(w http.ResponseWriter, r *http.Request) {
 	}
 	if *logBody {
 		jsonBytes, _ := json.Marshal(req)
-		log.Println(string(jsonBytes))
+		fmt.Println(string(jsonBytes))
 	}
 	req.RemoteIP = getIP(r).String()
 	if len(meta) > 0 {
