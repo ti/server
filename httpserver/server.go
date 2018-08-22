@@ -5,12 +5,14 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/clbanning/mxj"
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
+
+	"github.com/clbanning/mxj"
 )
 
 var (
@@ -40,7 +42,7 @@ func main() {
 	panic(http.Serve(listener, nil))
 }
 
-type url struct {
+type URL struct {
 	Scheme   string
 	Path     string
 	Host     string
@@ -59,14 +61,39 @@ type request struct {
 	RemoteAddr    string               `json:"remote_addr,omitempty"`
 	Proto         string               `json:"proto,omitempty"`
 	Host          string               `json:"host,omitempty"`
-	URL           url                  `json:"url,omitempty"`
+	URL           string               `json:"url,omitempty"`
 	Header        http.Header          `json:"header,omitempty"`
 	TLS           *tls.ConnectionState `json:"tls,omitempty"`
 	ContentLength int64                `json:"content_length,omitempty"`
 }
 
+var corsSuffix = []string{"nx.run", "nanxi.li"}
+
+func cors(w http.ResponseWriter, r *http.Request) {
+	referer := r.Referer()
+	if referer != "" {
+		if uri, err := url.Parse(referer); err == nil {
+			if uri.Host != r.Host {
+				for _, v := range corsSuffix {
+					if strings.HasSuffix(uri.Host, v) {
+						w.Header().Set("Access-Control-Allow-Credentials", "true")
+						break
+					}
+				}
+				w.Header().Set("Access-Control-Allow-Origin", uri.Scheme+"://"+uri.Host)
+				w.Header().Set("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, PATCH, OPTIONS")
+				w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept, Accept-Language")
+				w.Header().Set("Vary", "Origin, Accept-Encoding")
+				w.Header().Set("Access-Control-Max-Age", "86400")
+			}
+		}
+	}
+	w.Header().Set("Cache-Control", "no-cache, no-store, max-age=0, must-revalidate")
+
+}
 func httpInfo(w http.ResponseWriter, r *http.Request) {
-	u := url{Scheme: r.URL.Scheme, RawQuery: r.URL.RawQuery, Path: r.URL.Path, Host: r.Host}
+	cors(w, r)
+	u := URL{Scheme: r.URL.Scheme, RawQuery: r.URL.RawQuery, Path: r.URL.Path, Host: r.Host}
 	if q := r.URL.Query(); len(q) > 0 {
 		u.Query = q
 	}
