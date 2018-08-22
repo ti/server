@@ -61,7 +61,7 @@ type request struct {
 	RemoteAddr    string               `json:"remote_addr,omitempty"`
 	Proto         string               `json:"proto,omitempty"`
 	Host          string               `json:"host,omitempty"`
-	URL           string               `json:"url,omitempty"`
+	URL           URL               `json:"url,omitempty"`
 	Header        http.Header          `json:"header,omitempty"`
 	TLS           *tls.ConnectionState `json:"tls,omitempty"`
 	ContentLength int64                `json:"content_length,omitempty"`
@@ -69,28 +69,35 @@ type request struct {
 
 var corsSuffix = []string{"nx.run", "nanxi.li"}
 
+var safeUrlSuffix = []string{"login", "token"}
+
 func cors(w http.ResponseWriter, r *http.Request) {
-	referer := r.Referer()
-	if referer != "" {
-		if uri, err := url.Parse(referer); err == nil {
+	w.Header().Set("Cache-Control", "no-cache, no-store, max-age=0, must-revalidate")
+	origin := r.Header.Get("Origin")
+	if origin != "" {
+		if uri, err := url.Parse(origin); err == nil {
 			if uri.Host != r.Host {
+				for _, v := range safeUrlSuffix {
+					if strings.HasSuffix(r.URL.Path, v) {
+						return
+					}
+				}
 				for _, v := range corsSuffix {
 					if strings.HasSuffix(uri.Host, v) {
 						w.Header().Set("Access-Control-Allow-Credentials", "true")
 						break
 					}
 				}
-				w.Header().Set("Access-Control-Allow-Origin", uri.Scheme+"://"+uri.Host)
+				w.Header().Set("Access-Control-Allow-Origin", origin)
 				w.Header().Set("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, PATCH, OPTIONS")
-				w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept, Accept-Language")
+				w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept")
 				w.Header().Set("Vary", "Origin, Accept-Encoding")
 				w.Header().Set("Access-Control-Max-Age", "86400")
 			}
 		}
 	}
-	w.Header().Set("Cache-Control", "no-cache, no-store, max-age=0, must-revalidate")
-
 }
+
 func httpInfo(w http.ResponseWriter, r *http.Request) {
 	cors(w, r)
 	u := URL{Scheme: r.URL.Scheme, RawQuery: r.URL.RawQuery, Path: r.URL.Path, Host: r.Host}
