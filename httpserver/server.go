@@ -20,6 +20,8 @@ var (
 	logBody    = flag.Bool("l", false, "write http body log on std out")
 	dir        = flag.String("d", "./", "dir to server")
 	decodeBody = flag.Bool("b", false, "decode as struct")
+	cert       = flag.String("cert", "", "ssl cert")
+	key        = flag.String("key", "", "ssl key")
 )
 
 func main() {
@@ -29,17 +31,26 @@ func main() {
 		fmt.Printf("\u001b[31m[ERROR] %s\u001b[0m\n", err)
 		return
 	}
+	scheme := "http"
+	if *cert != "" && *key != "" {
+		scheme = "https"
+	}
 	fmt.Printf("Starting up http-server, serving \u001b[36m%s \u001b[0m \nAvailable on:\n", *dir)
 	addrs, _ := net.InterfaceAddrs()
 	for _, rawAddr := range addrs {
 		if ipnet, ok := rawAddr.(*net.IPNet); ok && ipnet.IP.To4() != nil {
-			fmt.Printf("\t\u001b[34mhttp://%s:%d\u001b[0m\n", ipnet.IP.To4().String(), *port)
+			fmt.Printf("\t\u001b[34m%s://%s:%d\u001b[0m\n", scheme, ipnet.IP.To4().String(), *port)
 		}
 	}
 	fmt.Println("Hit CTRL-C to stop the server")
 	http.Handle("/_info/", http.StripPrefix("/_info", http.HandlerFunc(httpInfo)))
 	http.Handle("/", http.FileServer(http.Dir(*dir)))
-	panic(http.Serve(listener, nil))
+	if scheme == "https" {
+		err = http.ServeTLS(listener, nil, *cert, *key)
+	} else {
+		err = http.Serve(listener, nil)
+	}
+	panic(err)
 }
 
 type URL struct {
@@ -61,7 +72,7 @@ type request struct {
 	RemoteAddr    string               `json:"remote_addr,omitempty"`
 	Proto         string               `json:"proto,omitempty"`
 	Host          string               `json:"host,omitempty"`
-	URL           URL               `json:"url,omitempty"`
+	URL           URL                  `json:"url,omitempty"`
 	Header        http.Header          `json:"header,omitempty"`
 	TLS           *tls.ConnectionState `json:"tls,omitempty"`
 	ContentLength int64                `json:"content_length,omitempty"`
