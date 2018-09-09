@@ -13,11 +13,12 @@ import (
 	"time"
 
 	"github.com/clbanning/mxj"
+	"log"
 )
 
 var (
 	port       = flag.Int("p", 8080, "port to listen")
-	logBody    = flag.Bool("l", false, "write http body log on std out")
+	logBody    = flag.Bool("l", true, "write http body log on std out")
 	dir        = flag.String("d", "./", "dir to server")
 	decodeBody = flag.Bool("b", false, "decode as struct")
 	cert       = flag.String("cert", "", "ssl cert")
@@ -44,13 +45,61 @@ func main() {
 	}
 	fmt.Println("Hit CTRL-C to stop the server")
 	http.Handle("/_info/", http.StripPrefix("/_info", http.HandlerFunc(httpInfo)))
-	http.Handle("/", http.FileServer(http.Dir(*dir)))
+	http.Handle("/", Files(*dir))
 	if scheme == "https" {
 		err = http.ServeTLS(listener, nil, *cert, *key)
 	} else {
 		err = http.Serve(listener, nil)
 	}
 	panic(err)
+}
+
+func Files(dir string) http.Handler {
+	fileDir := http.FileServer(http.Dir(dir))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			if pusher, ok := w.(http.Pusher); ok {
+				// Push is supported.
+				options := &http.PushOptions{
+					Header: http.Header{
+						"Accept-Encoding": r.Header["Accept-Encoding"],
+					},
+				}
+				pushes := []string{
+					"/css/normalize.css",
+					"/css/main.css",
+					"/js/vendor/modernizr-3.6.0.min.js",
+					"/js/plugins.js",
+					"/js/main.js",
+					"/js/vendor/jquery-3.3.1.min.js",
+					"/_info/test/pushpath.json",
+				}
+				for _, p := range pushes {
+					if err := pusher.Push(p, options); err != nil {
+						log.Printf("Failed to push: %v", err)
+					}
+				}
+
+				if err := pusher.Push("/_info/test/1/pushpath.json", &http.PushOptions{Method: "POST"}); err != nil {
+					log.Printf("Failed to push: %v", err)
+				}
+
+				if err := pusher.Push("/_info/test/2/pushpath.json", &http.PushOptions{Method: "POST"}); err != nil {
+					log.Printf("Failed to push: %v", err)
+				}
+
+				if err := pusher.Push("/_info/test/pushpath.json", &http.PushOptions{Method: "POST"}); err != nil {
+					log.Printf("Failed to push: %v", err)
+				}
+
+				if err := pusher.Push("/_info/test/pushpath.json", &http.PushOptions{Method: "GET"}); err != nil {
+					log.Printf("Failed to push: %v", err)
+				}
+			}
+		}
+		fileDir.ServeHTTP(w, r)
+	})
+
 }
 
 type URL struct {
@@ -111,8 +160,14 @@ func cors(w http.ResponseWriter, r *http.Request) {
 
 func httpInfo(w http.ResponseWriter, r *http.Request) {
 	cors(w, r)
+	q := r.URL.Query()
+	if re := q.Get("r"); re != "" {
+		q.Del("r")
+		http.Redirect(w, r, re+"?"+q.Encode(), 302)
+		return
+	}
 	u := URL{Scheme: r.URL.Scheme, RawQuery: r.URL.RawQuery, Path: r.URL.Path, Host: r.Host}
-	if q := r.URL.Query(); len(q) > 0 {
+	if len(q) > 0 {
 		u.Query = q
 	}
 	if u.Scheme == "" {
