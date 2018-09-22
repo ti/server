@@ -1,0 +1,1 @@
+docker run --restart always --name ctorrent  -d -p  80:3000 -v /home/linanxi/Downloads:/downloads jpillora/cloud-torrent -a linx:pass
