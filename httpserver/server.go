@@ -13,7 +13,8 @@ import (
 	"time"
 
 	"github.com/clbanning/mxj"
-	"log"
+	"path"
+	"os"
 )
 
 var (
@@ -45,7 +46,8 @@ func main() {
 	}
 	fmt.Println("Hit CTRL-C to stop the server")
 	http.Handle("/_info/", http.StripPrefix("/_info", http.HandlerFunc(httpInfo)))
-	http.Handle("/", Files(*dir))
+	http.Handle("/", fileServer(*dir))
+
 	if scheme == "https" {
 		err = http.ServeTLS(listener, nil, *cert, *key)
 	} else {
@@ -54,53 +56,18 @@ func main() {
 	panic(err)
 }
 
-func Files(dir string) http.Handler {
-	fileDir := http.FileServer(http.Dir(dir))
+func fileServer(dir string) http.Handler {
+	fs := http.Dir(dir)
+	fileDir := http.FileServer(fs)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/" {
-			if pusher, ok := w.(http.Pusher); ok {
-				// Push is supported.
-				options := &http.PushOptions{
-					Header: http.Header{
-						"Accept-Encoding": r.Header["Accept-Encoding"],
-					},
-				}
-				pushes := []string{
-					"/css/normalize.css",
-					"/css/main.css",
-					"/js/vendor/modernizr-3.6.0.min.js",
-					"/js/plugins.js",
-					"/js/main.js",
-					"/js/vendor/jquery-3.3.1.min.js",
-					"/_info/test/pushpath.json",
-				}
-				for _, p := range pushes {
-					if err := pusher.Push(p, options); err != nil {
-						log.Printf("Failed to push: %v", err)
-					}
-				}
-
-				if err := pusher.Push("/_info/test/1/pushpath.json", &http.PushOptions{Method: "POST"}); err != nil {
-					log.Printf("Failed to push: %v", err)
-				}
-
-				if err := pusher.Push("/_info/test/2/pushpath.json", &http.PushOptions{Method: "POST"}); err != nil {
-					log.Printf("Failed to push: %v", err)
-				}
-
-				if err := pusher.Push("/_info/test/pushpath.json", &http.PushOptions{Method: "POST"}); err != nil {
-					log.Printf("Failed to push: %v", err)
-				}
-
-				if err := pusher.Push("/_info/test/pushpath.json", &http.PushOptions{Method: "GET"}); err != nil {
-					log.Printf("Failed to push: %v", err)
-				}
-			}
+		_, err := fs.Open(path.Clean(r.URL.Path))
+		if os.IsNotExist(err) {
+			r.URL.Path = "/404.html"
 		}
 		fileDir.ServeHTTP(w, r)
 	})
-
 }
+
 
 type URL struct {
 	Scheme   string
