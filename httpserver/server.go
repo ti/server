@@ -1,27 +1,38 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/sirupsen/logrus"
+	"github.com/ti/noframe/grpcmux"
+	"github.com/ti/server/httpserver/pb"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
+	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
+	"os"
+	"path"
 	"strings"
 	"time"
-
 	"github.com/clbanning/mxj"
-	"path"
-	"os"
 )
 
 var (
 	port       = flag.Int("p", 8080, "port to listen")
 	logBody    = flag.Bool("l", true, "write http body log on std out")
+	decodeBody = flag.Bool("b", true, "decode as struct")
 	dir        = flag.String("d", "./", "dir to server")
-	decodeBody = flag.Bool("b", false, "decode as struct")
 	cert       = flag.String("cert", "", "ssl cert")
 	key        = flag.String("key", "", "ssl key")
 )
@@ -45,15 +56,28 @@ func main() {
 		}
 	}
 	fmt.Println("Hit CTRL-C to stop the server")
-	http.Handle("/_info/", http.StripPrefix("/_info", http.HandlerFunc(httpInfo)))
-	http.Handle("/", fileServer(*dir))
 
-	if scheme == "https" {
-		err = http.ServeTLS(listener, nil, *cert, *key)
-	} else {
-		err = http.Serve(listener, nil)
+	mux := grpcmux.NewServeMux()
+	service := &service{}
+	pb.RegisterServerServerHandlerClient(context.TODO(), mux.ServeMux, service)
+	//register all as grpc service as well
+	gs := grpc.NewServer()
+	pb.RegisterServerServer(gs, service)
+	reflection.Register(gs)
+
+	fs := fileServer(*dir)
+
+	runtime.OtherErrorHandler = func(w http.ResponseWriter, r *http.Request, msg string, code int) {
+		if strings.HasPrefix(r.URL.Path, "/www/") {
+			http.StripPrefix("/www/", fs).ServeHTTP(w, r)
+		} else if r.URL.Path == "/" {
+			http.Redirect(w, r, "/www/", http.StatusFound)
+		} else {
+			httpInfo(w, r)
+		}
 	}
-	panic(err)
+	handler := GRPCMixHandler(mux, gs)
+	panic(http.Serve(listener, handler))
 }
 
 func fileServer(dir string) http.Handler {
@@ -67,7 +91,6 @@ func fileServer(dir string) http.Handler {
 		fileDir.ServeHTTP(w, r)
 	})
 }
-
 
 type URL struct {
 	Scheme   string
@@ -94,27 +117,13 @@ type request struct {
 	ContentLength int64                `json:"content_length,omitempty"`
 }
 
-var corsSuffix = []string{"nx.run", "nanxi.li"}
-
-var safeUrlSuffix = []string{"login", "token"}
-
 func cors(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache, no-store, max-age=0, must-revalidate")
 	origin := r.Header.Get("Origin")
 	if origin != "" {
 		if uri, err := url.Parse(origin); err == nil {
 			if uri.Host != r.Host {
-				for _, v := range safeUrlSuffix {
-					if strings.HasSuffix(r.URL.Path, v) {
-						return
-					}
-				}
-				for _, v := range corsSuffix {
-					if strings.HasSuffix(uri.Host, v) {
-						w.Header().Set("Access-Control-Allow-Credentials", "true")
-						break
-					}
-				}
+				w.Header().Set("Access-Control-Allow-Credentials", "true")
 				w.Header().Set("Access-Control-Allow-Origin", origin)
 				w.Header().Set("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, PATCH, OPTIONS")
 				w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept")
@@ -125,14 +134,8 @@ func cors(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func httpInfo(w http.ResponseWriter, r *http.Request) {
-	cors(w, r)
+func getRequestInfo(r *http.Request) *request {
 	q := r.URL.Query()
-	if re := q.Get("r"); re != "" {
-		q.Del("r")
-		http.Redirect(w, r, re+"?"+q.Encode(), 302)
-		return
-	}
 	u := URL{Scheme: r.URL.Scheme, RawQuery: r.URL.RawQuery, Path: r.URL.Path, Host: r.Host}
 	if len(q) > 0 {
 		u.Query = q
@@ -159,53 +162,67 @@ func httpInfo(w http.ResponseWriter, r *http.Request) {
 	req.RemoteAddr = r.RemoteAddr
 	req.Proto = r.Proto
 	req.ContentLength = r.ContentLength
-	_, decode := r.URL.Query()["decode_body"]
-	if !*decodeBody || decode {
-		if b, _ := ioutil.ReadAll(r.Body); len(b) > 0 {
-			req.Body = string(b)
-		}
-	} else {
-		contentType := r.Header.Get("Content-Type")
-		if *decodeBody && strings.Contains(contentType, "json") {
-			var data interface{}
-			dec := json.NewDecoder(r.Body)
-			if err := dec.Decode(&data); err == nil {
-				req.Body = data
+	contentType := r.Header.Get("Content-Type")
+
+	if !strings.HasPrefix(contentType, "application/grpc") {
+		if *decodeBody {
+			if strings.Contains(contentType, "json") {
+				var data interface{}
+				dec := json.NewDecoder(r.Body)
+				if err := dec.Decode(&data); err == nil {
+					req.Body = data
+				} else {
+					meta["error"] = fmt.Sprintf("json decode error - %s", err)
+				}
+			} else if strings.Contains(contentType, "form") {
+				r.ParseForm()
+				req.Body = r.PostForm
+			} else if strings.Contains(contentType, "xml") {
+				b, _ := ioutil.ReadAll(r.Body)
+				data, err := mxj.NewMapXml(b)
+				if err == nil {
+					req.Body = data
+				} else {
+					meta["error"] = fmt.Sprintf("xml decode error - %s", err)
+				}
+			} else if strings.Contains(contentType, "grpc") {
+				//do noting
 			} else {
-				meta["error"] = fmt.Sprintf("json decode error - %s", err)
-			}
-		} else if strings.Contains(contentType, "form") {
-			r.ParseForm()
-			req.Body = r.PostForm
-		} else if strings.Contains(contentType, "xml") {
-			b, _ := ioutil.ReadAll(r.Body)
-			data, err := mxj.NewMapXml(b)
-			if err == nil {
-				req.Body = data
-			} else {
-				meta["error"] = fmt.Sprintf("xml decode error - %s", err)
+				if r.Method == "GET" || r.Method == "DELETE" {
+					req.Body = ""
+				} else {
+					if b, _ := ioutil.ReadAll(r.Body); len(b) > 0 {
+						req.Body = string(b)
+					}
+				}
 			}
 		} else {
 			if b, _ := ioutil.ReadAll(r.Body); len(b) > 0 {
-				req.Body = string(b)
+				req.Body = b
 			}
 		}
-	}
-	if *logBody {
-		jsonBytes, _ := json.Marshal(req)
-		fmt.Println(string(jsonBytes))
 	}
 	req.RemoteIP = getIP(r).String()
 	if len(meta) > 0 {
 		req.Meta = &meta
 	}
-	resp, _ := json.MarshalIndent(req, "", "\t")
-	if strings.HasSuffix(r.URL.Path, ".html") {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprintf(w, "<html><head><title>%s</title><head/><h1>%s</h1><pre>%s</pre></html>", "Request Infos", "Request Infos", string(resp))
+	return &req
+}
+
+func httpInfo(w http.ResponseWriter, r *http.Request) {
+	cors(w, r)
+	req, ok := r.Context().Value(requestKey{}).(*request)
+	if ok {
+		resp, _ := json.MarshalIndent(req, "", "\t")
+		if strings.HasSuffix(r.URL.Path, ".html") {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			fmt.Fprintf(w, "<html><head><title>%s</title><head/><h1>%s</h1><pre>%s</pre></html>", "Request Infos", "Request Infos", string(resp))
+		} else {
+			w.Header().Set("Content-Type", "application/json")
+			w.Write(resp)
+		}
 	} else {
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(resp)
+		w.Write([]byte("no info"))
 	}
 }
 
@@ -225,4 +242,86 @@ func getIP(r *http.Request) net.IP {
 		return net.ParseIP(r.RemoteAddr)
 	}
 	return net.ParseIP(host)
+}
+
+//GRPCMixHandler mix grpc and http in one Handler
+func GRPCMixHandler(h http.Handler, grpc *grpc.Server) http.Handler {
+	mix := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		req := getRequestInfo(r)
+		log("grpc_mix", req)
+		ctx := context.WithValue(r.Context(), requestKey{}, req)
+		if r.ProtoMajor == 2 && strings.HasPrefix(r.Header.Get("Content-Type"), "application/grpc") {
+			grpc.ServeHTTP(w, r.WithContext(ctx))
+		} else {
+			h.ServeHTTP(w, r.WithContext(ctx))
+		}
+	})
+	server := &http2.Server{}
+	return h2c.NewHandler(mix, server)
+}
+
+type service struct{}
+
+type requestKey struct{}
+
+func (h *service) Info(ctx context.Context, in *pb.Request) (*pb.Response, error) {
+	resp := &pb.Response{
+		Data: make(map[string]*pb.Response_List),
+	}
+	defer func() {
+		log("grpc", resp)
+	}()
+	req, ok := ctx.Value(requestKey{}).(*request)
+	if ok {
+		data, _ := json.Marshal(req)
+		list := pb.Response_List{
+			List: []string{string(data)},
+		}
+		resp.Data["Request"] = &list;
+	}
+	infoType := strings.ToLower(in.Type)
+	if code, ok := strToCode[infoType]; ok {
+		return nil, status.New(code, infoType).Err()
+	}
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		logrus.Infof("failed to extract ServerMetadata from context")
+		return nil, status.New(codes.InvalidArgument, fmt.Sprintf("message %s", in.Type)).Err()
+	}
+	if ok {
+		for k, v := range md {
+			list := pb.Response_List{
+				List: v,
+			}
+			resp.Data[k] = &list
+		}
+	}
+	return resp, nil
+}
+
+func log(reqType string, req interface{}) {
+	if !*logBody {
+		return
+	}
+	data, _ := json.Marshal(req)
+	logrus.WithField("type", reqType).Info(string(data))
+}
+
+var strToCode = map[string]codes.Code{
+	"cancelled": /* [sic] */ codes.Canceled,
+	"unknown":               codes.Unknown,
+	"invalid_argument":      codes.InvalidArgument,
+	"deadline_exceeded":     codes.DeadlineExceeded,
+	"not_found":             codes.NotFound,
+	"already_exists":        codes.AlreadyExists,
+	"permission_denied":     codes.PermissionDenied,
+	"resource_exhausted":    codes.ResourceExhausted,
+	"failed_precondition":   codes.FailedPrecondition,
+	"aborted":               codes.Aborted,
+	"out_of_range":          codes.OutOfRange,
+	"unimplemented":         codes.Unimplemented,
+	"internal":              codes.Internal,
+	"unavailable":           codes.Unavailable,
+	"data_loss":             codes.DataLoss,
+	"uauthenticated":        codes.Unauthenticated,
 }

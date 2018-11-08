@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package pb;
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+
+service Server {
+    rpc Info (Request) returns (Response) {
+        option (google.api.http) = {
+			get: "/v1/{type}"
+		};
+    }
+}
+
+message Request {
+    string type = 1;
+}
+
+message Response {
+    message List {
+        repeated string list = 1;
+    }
+    map<string, List> data = 1;
+}
+
+

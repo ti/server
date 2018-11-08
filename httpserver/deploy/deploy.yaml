@@ -1,0 +1,45 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: nx-test-service
+    xlsoa-instance: nx-test-service
+  name: nx-test-service
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nx-test-service
+      xlsoa-instance: nx-test-service
+  template:
+    metadata:
+      labels:
+        app: nx-test-service
+        xlsoa-instance: nx-test-service
+      name: nx-test-service
+    spec:
+      containers:
+        - name: nx-test-service
+          image: nanxi/server:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+              protocol: TCP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: nx-test-service
+  namespace: default
+  name: nx-test-service
+spec:
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      protocol: TCP
+  selector:
+    app: nx-test-service
