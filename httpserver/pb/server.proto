@@ -1,11 +1,25 @@
 syntax = "proto3";
 
-package pb;
+package info;
 
 import "google/api/annotations.proto";
-import "google/protobuf/timestamp.proto";
+import "protoc-gen-swagger/options/annotations.proto";
 
+option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
+    info: {
+        title: "info-service"
+        version : "1.0.0"
+        description: "a service to print http or grpc request "
+    };
+    schemes: HTTPS
+    consumes: "application/json"
+    produces: "application/json"
+};
+
+
+// Service for a server to get request info
 service Server {
+    // Get grpc request infos
     rpc Info (Request) returns (Response) {
         option (google.api.http) = {
 			get: "/v1/{type}"
@@ -13,10 +27,12 @@ service Server {
     }
 }
 
+// The parameters to Server.Info.
 message Request {
     string type = 1;
 }
 
+// The Response to Server.Info.
 message Response {
     message List {
         repeated string list = 1;
