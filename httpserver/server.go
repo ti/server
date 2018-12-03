@@ -23,18 +23,18 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"time"
 )
 
 var (
 	port       = flag.Int("p", 8080, "port to listen")
-	logBody    = flag.Bool("l", true, "write http body log on std out")
+	logBody    = flag.Bool("l", false, "write http body log on std out")
 	decodeBody = flag.Bool("b", true, "decode as struct")
 	dir        = flag.String("d", "./", "dir to server")
 	showInfo   = flag.Bool("info", false, "show info router")
-	spa        = flag.Bool("spa", true, "show info router")
+	spa        = flag.Bool("spa", true, "is is a single page app?")
 	cert       = flag.String("cert", "", "ssl cert")
 	key        = flag.String("key", "", "ssl key")
 )
@@ -94,13 +94,29 @@ func main() {
 }
 
 func fileServer(dir string) http.Handler {
-	fs := http.Dir(dir)
+	absPath, err := filepath.Abs(dir)
+	if err != nil {
+		panic(err)
+	}
+	fs := http.Dir(absPath)
 	fileDir := http.FileServer(fs)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if *spa {
-			_, err := fs.Open(path.Clean(r.URL.Path))
-			if os.IsNotExist(err) {
-				r.URL.Path = "/index.html"
+		if *spa && r.URL.Path != "/" && r.URL.Path != "" {
+			var err error
+			fullName := absPath + r.URL.Path
+			if strings.HasSuffix(r.URL.Path, "/") {
+				_, err = os.Stat(fullName)
+			} else {
+				_, err = os.Open(fullName)
+			}
+			if err != nil && os.IsNotExist(err) {
+				if _, err := fs.Open("/index.html"); err == nil {
+					r.URL.Path = "/"
+					r.RequestURI = "/"
+					if r.URL.RawQuery != "" {
+						r.RequestURI += "?" + r.URL.RawQuery
+					}
+				}
 			}
 		}
 		fileDir.ServeHTTP(w, r)
