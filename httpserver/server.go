@@ -34,6 +34,7 @@ var (
 	decodeBody = flag.Bool("b", true, "decode as struct")
 	dir        = flag.String("d", "./", "dir to server")
 	showInfo   = flag.Bool("info", false, "show info router")
+	spa        = flag.Bool("spa", true, "show info router")
 	cert       = flag.String("cert", "", "ssl cert")
 	key        = flag.String("key", "", "ssl key")
 )
@@ -96,9 +97,11 @@ func fileServer(dir string) http.Handler {
 	fs := http.Dir(dir)
 	fileDir := http.FileServer(fs)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, err := fs.Open(path.Clean(r.URL.Path))
-		if os.IsNotExist(err) {
-			r.URL.Path = "/404.html"
+		if *spa {
+			_, err := fs.Open(path.Clean(r.URL.Path))
+			if os.IsNotExist(err) {
+				r.URL.Path = "/index.html"
+			}
 		}
 		fileDir.ServeHTTP(w, r)
 	})
@@ -320,20 +323,20 @@ func log(reqType string, req interface{}) {
 }
 
 var strToCode = map[string]codes.Code{
-	"cancelled":/* [sic] */ codes.Canceled,
-	"unknown":             codes.Unknown,
-	"invalid_argument":    codes.InvalidArgument,
-	"deadline_exceeded":   codes.DeadlineExceeded,
-	"not_found":           codes.NotFound,
-	"already_exists":      codes.AlreadyExists,
-	"permission_denied":   codes.PermissionDenied,
-	"resource_exhausted":  codes.ResourceExhausted,
-	"failed_precondition": codes.FailedPrecondition,
-	"aborted":             codes.Aborted,
-	"out_of_range":        codes.OutOfRange,
-	"unimplemented":       codes.Unimplemented,
-	"internal":            codes.Internal,
-	"unavailable":         codes.Unavailable,
-	"data_loss":           codes.DataLoss,
-	"uauthenticated":      codes.Unauthenticated,
+	"cancelled": /* [sic] */ codes.Canceled,
+	"unknown":               codes.Unknown,
+	"invalid_argument":      codes.InvalidArgument,
+	"deadline_exceeded":     codes.DeadlineExceeded,
+	"not_found":             codes.NotFound,
+	"already_exists":        codes.AlreadyExists,
+	"permission_denied":     codes.PermissionDenied,
+	"resource_exhausted":    codes.ResourceExhausted,
+	"failed_precondition":   codes.FailedPrecondition,
+	"aborted":               codes.Aborted,
+	"out_of_range":          codes.OutOfRange,
+	"unimplemented":         codes.Unimplemented,
+	"internal":              codes.Internal,
+	"unavailable":           codes.Unavailable,
+	"data_loss":             codes.DataLoss,
+	"uauthenticated":        codes.Unauthenticated,
 }
