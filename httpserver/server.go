@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/clbanning/mxj"
+	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/sirupsen/logrus"
 	"github.com/ti/noframe/grpcmux"
-	"github.com/ti/server/httpserver/pb"
+	pb "github.com/ti/server/httpserver/pb"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
@@ -16,7 +18,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
-	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -25,7 +26,6 @@ import (
 	"path"
 	"strings"
 	"time"
-	"github.com/clbanning/mxj"
 )
 
 var (
@@ -33,6 +33,7 @@ var (
 	logBody    = flag.Bool("l", true, "write http body log on std out")
 	decodeBody = flag.Bool("b", true, "decode as struct")
 	dir        = flag.String("d", "./", "dir to server")
+	showInfo   = flag.Bool("info", false, "show info router")
 	cert       = flag.String("cert", "", "ssl cert")
 	key        = flag.String("key", "", "ssl key")
 )
@@ -68,13 +69,24 @@ func main() {
 	fs := fileServer(*dir)
 
 	runtime.OtherErrorHandler = func(w http.ResponseWriter, r *http.Request, msg string, code int) {
-		if strings.HasPrefix(r.URL.Path, "/www/") {
-			http.StripPrefix("/www/", fs).ServeHTTP(w, r)
-		} else if r.URL.Path == "/" {
-			http.Redirect(w, r, "/www/", http.StatusFound)
+		if *showInfo {
+			if strings.HasPrefix(r.URL.Path, "/www/") {
+				http.StripPrefix("/www/", fs).ServeHTTP(w, r)
+			} else if r.URL.Path == "/" {
+				http.Redirect(w, r, "/www/", http.StatusFound)
+			} else {
+				httpInfo(w, r)
+			}
 		} else {
-			httpInfo(w, r)
+			if strings.HasPrefix(r.URL.Path, "/_info/") {
+				r.URL.Path = strings.TrimPrefix(r.URL.Path, "/_info/")
+				r.RequestURI = strings.TrimPrefix(r.RequestURI, "/_info/")
+				httpInfo(w, r)
+			} else {
+				fs.ServeHTTP(w, r)
+			}
 		}
+
 	}
 	handler := GRPCMixHandler(mux, gs)
 	panic(http.Serve(listener, handler))
@@ -277,7 +289,7 @@ func (h *service) Info(ctx context.Context, in *pb.Request) (*pb.Response, error
 		list := pb.Response_List{
 			List: []string{string(data)},
 		}
-		resp.Data["Request"] = &list;
+		resp.Data["Request"] = &list
 	}
 	infoType := strings.ToLower(in.Type)
 	if code, ok := strToCode[infoType]; ok {
@@ -308,20 +320,20 @@ func log(reqType string, req interface{}) {
 }
 
 var strToCode = map[string]codes.Code{
-	"cancelled": /* [sic] */ codes.Canceled,
-	"unknown":               codes.Unknown,
-	"invalid_argument":      codes.InvalidArgument,
-	"deadline_exceeded":     codes.DeadlineExceeded,
-	"not_found":             codes.NotFound,
-	"already_exists":        codes.AlreadyExists,
-	"permission_denied":     codes.PermissionDenied,
-	"resource_exhausted":    codes.ResourceExhausted,
-	"failed_precondition":   codes.FailedPrecondition,
-	"aborted":               codes.Aborted,
-	"out_of_range":          codes.OutOfRange,
-	"unimplemented":         codes.Unimplemented,
-	"internal":              codes.Internal,
-	"unavailable":           codes.Unavailable,
-	"data_loss":             codes.DataLoss,
-	"uauthenticated":        codes.Unauthenticated,
+	"cancelled":/* [sic] */ codes.Canceled,
+	"unknown":             codes.Unknown,
+	"invalid_argument":    codes.InvalidArgument,
+	"deadline_exceeded":   codes.DeadlineExceeded,
+	"not_found":           codes.NotFound,
+	"already_exists":      codes.AlreadyExists,
+	"permission_denied":   codes.PermissionDenied,
+	"resource_exhausted":  codes.ResourceExhausted,
+	"failed_precondition": codes.FailedPrecondition,
+	"aborted":             codes.Aborted,
+	"out_of_range":        codes.OutOfRange,
+	"unimplemented":       codes.Unimplemented,
+	"internal":            codes.Internal,
+	"unavailable":         codes.Unavailable,
+	"data_loss":           codes.DataLoss,
+	"uauthenticated":      codes.Unauthenticated,
 }
