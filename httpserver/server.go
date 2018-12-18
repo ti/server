@@ -31,6 +31,7 @@ import (
 var (
 	port       = flag.Int("p", 8080, "port to listen")
 	logBody    = flag.Bool("l", false, "write http body log on std out")
+	cors    = flag.Bool("cors", true, "enable cors?")
 	decodeBody = flag.Bool("b", true, "decode as struct")
 	dir        = flag.String("d", "./", "dir to server")
 	showInfo   = flag.Bool("info", false, "show info router")
@@ -66,9 +67,7 @@ func main() {
 	gs := grpc.NewServer()
 	pb.RegisterServerServer(gs, service)
 	reflection.Register(gs)
-
 	fs := fileServer(*dir)
-
 	runtime.OtherErrorHandler = func(w http.ResponseWriter, r *http.Request, msg string, code int) {
 		if *showInfo {
 			if strings.HasPrefix(r.URL.Path, "/www/") {
@@ -87,7 +86,6 @@ func main() {
 				fs.ServeHTTP(w, r)
 			}
 		}
-
 	}
 	handler := GRPCMixHandler(mux, gs)
 	panic(http.Serve(listener, handler))
@@ -148,7 +146,7 @@ type request struct {
 	ContentLength int64                `json:"content_length,omitempty"`
 }
 
-func cors(w http.ResponseWriter, r *http.Request) {
+func enableCors(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache, no-store, max-age=0, must-revalidate")
 	origin := r.Header.Get("Origin")
 	if origin != "" {
@@ -241,7 +239,6 @@ func getRequestInfo(r *http.Request) *request {
 }
 
 func httpInfo(w http.ResponseWriter, r *http.Request) {
-	cors(w, r)
 	req, ok := r.Context().Value(requestKey{}).(*request)
 	if ok {
 		resp, _ := json.MarshalIndent(req, "", "\t")
@@ -278,6 +275,9 @@ func getIP(r *http.Request) net.IP {
 //GRPCMixHandler mix grpc and http in one Handler
 func GRPCMixHandler(h http.Handler, grpc *grpc.Server) http.Handler {
 	mix := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if *cors {
+			enableCors(w,r)
+		}
 		req := getRequestInfo(r)
 		log("grpc_mix", req)
 		ctx := context.WithValue(r.Context(), requestKey{}, req)
