@@ -1,18 +1,19 @@
 package main
 
 import (
-	"net/http"
-	"fmt"
-	"flag"
+	"bytes"
 	"context"
 	"encoding/json"
-	"net/url"
-	"strings"
-	"github.com/coreos/etcd/clientv3"
-	"strconv"
-	"time"
+	"flag"
+	"fmt"
+	"go.etcd.io/etcd/clientv3"
+	"go.etcd.io/etcd/pkg/transport"
 	"io/ioutil"
-	"bytes"
+	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
+	"time"
 )
 
 var addr = flag.String("addr", ":5080", "addr to serve on")
@@ -24,7 +25,11 @@ var client *clientv3.Client
 func main() {
 	flag.Parse()
 	var err error
-	client, err = newEtcdClient(*uri)
+	etcdURL, err := url.Parse(*uri)
+	if err != nil {
+		panic(err)
+	}
+	client, err = newEtcdClient(etcdURL)
 	if err != nil {
 		panic(err)
 	}
@@ -154,21 +159,32 @@ func marshal(src interface{}) (ret []byte) {
 	return
 }
 
-func newEtcdClient(rawurl string) (client *clientv3.Client, err error) {
-	var timeout = 5 * time.Second
-	var uri *url.URL
-	uri, err = url.Parse(rawurl)
-	if err != nil {
-		return nil, err
-	}
+func newEtcdClient(etcdUri *url.URL) (*clientv3.Client, error) {
 	etcdConfig := clientv3.Config{
-		Endpoints:   strings.Split(uri.Host, ","),
-		DialTimeout: timeout,
+		Endpoints:   strings.Split(etcdUri.Host, ","),
+		DialTimeout: 30 * time.Second,
 	}
-	if u := uri.User; u != nil {
-		etcdConfig.Username = u.Username()
-		etcdConfig.Password, _ = u.Password()
+	if etcdUri.User != nil && etcdUri.User.Username() != "" {
+		etcdConfig.Username = etcdUri.User.Username()
+		etcdConfig.Password, _ = etcdUri.User.Password()
 	}
-	client, err = clientv3.New(etcdConfig)
-	return
+	etcdUriQuery := etcdUri.Query()
+	cert := etcdUriQuery.Get("cert")
+	if cert != "" {
+		key := etcdUriQuery.Get("key")
+		ca := etcdUriQuery.Get("ca")
+		// Load client cert
+		tlsInfo := transport.TLSInfo{
+			CertFile:      cert,
+			KeyFile:       key,
+			TrustedCAFile: ca,
+		}
+		tlsConfig, err := tlsInfo.ClientConfig()
+		if err != nil {
+			return nil, err
+		}
+		// Add TLS config
+		etcdConfig.TLS = tlsConfig
+	}
+	return clientv3.New(etcdConfig)
 }
