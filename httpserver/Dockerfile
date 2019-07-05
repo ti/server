@@ -38,8 +38,8 @@ RUN apt-get update
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get install -y mongodb-org
 RUN apt-get -y install git \
-    vim
-    curl
+    vim \
+    curl \
     wget
 
 COPY --from=0 /etc/ssl/certs/ /etc/ssl/certs/
