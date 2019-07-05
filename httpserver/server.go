@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/base64"
@@ -20,10 +21,8 @@ import (
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 	"io/ioutil"
-	"math"
 	"net"
 	"net/http"
-	"net/http/httputil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -153,31 +152,37 @@ func Proxy(w http.ResponseWriter, r *http.Request) {
 	} else {
 		r.RequestURI = r.URL.Path
 	}
-	r.Header.Del("Accept-Encoding")
-	r.Header.Del("Content-Length")
-	NewReverseProxy(proxyURI).ServeHTTP(w, r)
+	body, err := ioutil.ReadAll(r.Body)
+	req, err := http.NewRequest(r.Method, r.URL.String(), ioutil.NopCloser(bytes.NewBuffer(body)))
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	req.Header = r.Header
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	defer resp.Body.Close()
+	b, err := ioutil.ReadAll(resp.Body)
+	delete(resp.Header, "Content-Length")
+	for k,_ := range resp.Header {
+		w.Header().Set(k, resp.Header.Get(k))
+	}
+	w.WriteHeader(resp.StatusCode)
+	if resp.StatusCode != 200 {
+		x := string(b)
+		if len(x) == 0 {
+			w.Write([]byte("{}"))
+		} else {
+			w.Write(b)
+		}
+	} else {
+		w.Write(b)
+	}
 }
 
-
-var defaultTransport = &http.Transport{
-	Proxy: http.ProxyFromEnvironment,
-	DialContext: (&net.Dialer{
-		Timeout:   time.Second,
-		KeepAlive: time.Minute,
-	}).DialContext,
-	MaxIdleConns:          math.MaxUint32,
-	MaxIdleConnsPerHost:   math.MaxUint32,
-	IdleConnTimeout:       180 * time.Second,
-	TLSHandshakeTimeout:   10 * time.Second,
-	ExpectContinueTimeout: 30 * time.Second,
-}
-
-// NewReverseProxy 新建反向代理
-func NewReverseProxy(target *url.URL) *httputil.ReverseProxy {
-	proxy := httputil.NewSingleHostReverseProxy(target)
-	proxy.Transport = defaultTransport
-	return proxy
-}
 
 
 func fileServer(dir string) http.Handler {
