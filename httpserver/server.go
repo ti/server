@@ -19,8 +19,10 @@ import (
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 	"io/ioutil"
+	"math"
 	"net"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -38,6 +40,7 @@ var (
 	spa        = flag.Bool("spa", true, "is is a single page app?")
 	cert       = flag.String("cert", "", "ssl cert")
 	key        = flag.String("key", "", "ssl key")
+	proxyToken        = flag.String("proxy_token", "", "ssl key")
 )
 
 func main() {
@@ -87,9 +90,66 @@ func main() {
 			}
 		}
 	}
+
 	handler := GRPCMixHandler(mux, gs)
-	panic(http.Serve(listener, handler))
+	http.Handle("/_proxy/", http.StripPrefix("/_proxy", http.HandlerFunc(Proxy)))
+	http.Handle("/_info/", http.StripPrefix("/_info", http.HandlerFunc(httpInfo)))
+	http.Handle("/", handler)
+	panic(http.Serve(listener, nil))
 }
+
+
+func Proxy(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	token := q.Get("proxy_token")
+	base := q.Get("proxy_base")
+	if token != *proxyToken {
+		http.Error(w, "token not match", 403)
+		return
+	}
+	proxyURI, err := url.Parse(base)
+	if err != nil || proxyURI.Scheme == "" || proxyURI.Host == "" {
+		http.Error(w, "base not found", 404)
+		return
+	}
+	r.Host = proxyURI.Host
+	r.URL.Scheme = proxyURI.Scheme
+	r.URL.Host = proxyURI.Host
+	r.URL.Path = proxyURI.Path + r.URL.Path
+	delete(q, "proxy_token")
+	delete(q, "proxy_base")
+	r.URL.RawQuery = q.Encode()
+	if r.URL.RawQuery != "" {
+		r.RequestURI = r.URL.Path + "?" +  r.URL.RawQuery
+	} else {
+		r.RequestURI = r.URL.Path
+	}
+	r.Header.Del("Accept-Encoding")
+	r.Header.Del("Content-Length")
+	NewReverseProxy(proxyURI).ServeHTTP(w, r)
+}
+
+
+var defaultTransport = &http.Transport{
+	Proxy: http.ProxyFromEnvironment,
+	DialContext: (&net.Dialer{
+		Timeout:   time.Second,
+		KeepAlive: time.Minute,
+	}).DialContext,
+	MaxIdleConns:          math.MaxUint32,
+	MaxIdleConnsPerHost:   math.MaxUint32,
+	IdleConnTimeout:       180 * time.Second,
+	TLSHandshakeTimeout:   10 * time.Second,
+	ExpectContinueTimeout: 30 * time.Second,
+}
+
+// NewReverseProxy 新建反向代理
+func NewReverseProxy(target *url.URL) *httputil.ReverseProxy {
+	proxy := httputil.NewSingleHostReverseProxy(target)
+	proxy.Transport = defaultTransport
+	return proxy
+}
+
 
 func fileServer(dir string) http.Handler {
 	absPath, err := filepath.Abs(dir)
@@ -240,17 +300,16 @@ func getRequestInfo(r *http.Request) *request {
 
 func httpInfo(w http.ResponseWriter, r *http.Request) {
 	req, ok := r.Context().Value(requestKey{}).(*request)
-	if ok {
-		resp, _ := json.MarshalIndent(req, "", "\t")
-		if strings.HasSuffix(r.URL.Path, ".html") {
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			fmt.Fprintf(w, "<html><head><title>%s</title><head/><h1>%s</h1><pre>%s</pre></html>", "Request Infos", "Request Infos", string(resp))
-		} else {
-			w.Header().Set("Content-Type", "application/json")
-			w.Write(resp)
-		}
+	if !ok {
+		req = getRequestInfo(r)
+	}
+	resp, _ := json.MarshalIndent(req, "", "\t")
+	if strings.HasSuffix(r.URL.Path, ".html") {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		fmt.Fprintf(w, "<html><head><title>%s</title><head/><h1>%s</h1><pre>%s</pre></html>", "Request Infos", "Request Infos", string(resp))
 	} else {
-		w.Write([]byte("no info"))
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(resp)
 	}
 }
 

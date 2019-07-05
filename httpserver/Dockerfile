@@ -10,7 +10,38 @@ RUN go install -ldflags '-s -w'
 WORKDIR /go/src/github.com/ti/server/httpserver/client
 RUN go install -ldflags '-s -w'
 
-FROM scratch
+FROM ubuntu:18.04
+RUN apt-get update
+RUN apt-get -y install traceroute \
+    dnsutils \
+    apt-utils\
+    mtr-tiny \
+    iputils-ping \
+    netcat-openbsd \
+    wget \
+    curl \
+    bash \
+    htop \
+    tcpdump \
+    nmap \
+    iperf \
+    gnupg2 \
+    openssh-client \
+    jq
+
+RUN apt-get install -y golang
+RUN apt-get install -y net-tools
+RUN apt-get install -y redis-server
+RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 9DA31620334BD75D9DCB49F368818C72E52529D4
+RUN echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.0.list
+RUN apt-get update
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get install -y mongodb-org
+RUN apt-get -y install git \
+    vim
+    curl
+    wget
+
 COPY --from=0 /etc/ssl/certs/ /etc/ssl/certs/
 COPY --from=0 /go/bin/httpserver /app/main
 COPY --from=0 /go/bin/client /app/client
