@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"github.com/sirupsen/logrus"
-	"github.com/ti/server/httpserver/pb"
+	 pb "github.com/ti/server/httpserver/pb"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
