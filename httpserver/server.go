@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -40,7 +41,7 @@ var (
 	spa        = flag.Bool("spa", true, "is is a single page app?")
 	cert       = flag.String("cert", "", "ssl cert")
 	key        = flag.String("key", "", "ssl key")
-	proxyToken        = flag.String("proxy_token", "", "ssl key")
+	proxyToken        = flag.String("proxy_token", "xxx", "proxy token")
 )
 
 func main() {
@@ -100,13 +101,44 @@ func main() {
 
 
 func Proxy(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query()
-	token := q.Get("proxy_token")
-	base := q.Get("proxy_base")
+	var base, token string
+	if strings.HasPrefix(r.URL.Path, "/base/") {
+		host := r.URL.Path[6:]
+		idx := strings.Index(host, "/")
+		if idx < 0 {
+			idx = len(host)
+		}
+		base = host[0:idx]
+		if h, err := base64.RawURLEncoding.DecodeString(base); err == nil {
+			base = string(h)
+		}
+		if !strings.HasPrefix(base, "http") {
+			base = "https://" + base
+		}
+		r.URL.Path = host[idx:]
+		if strings.HasPrefix(r.URL.Path, "/token/") {
+			r.URL.Path = r.URL.Path[7:]
+			idx := strings.Index(r.URL.Path, "/")
+			if idx < 0 {
+				idx = len(r.URL.Path)
+			}
+			token = r.URL.Path[0:idx]
+			r.URL.Path = r.URL.Path[idx:]
+		}
+	}
+	if base == "" {
+		q := r.URL.Query()
+		token = q.Get("proxy_token")
+		base = q.Get("proxy_base")
+		delete(q, "proxy_token")
+		delete(q, "proxy_base")
+		r.URL.RawQuery = q.Encode()
+	}
 	if token != *proxyToken {
 		http.Error(w, "token not match", 403)
 		return
 	}
+
 	proxyURI, err := url.Parse(base)
 	if err != nil || proxyURI.Scheme == "" || proxyURI.Host == "" {
 		http.Error(w, "base not found", 404)
@@ -116,9 +148,6 @@ func Proxy(w http.ResponseWriter, r *http.Request) {
 	r.URL.Scheme = proxyURI.Scheme
 	r.URL.Host = proxyURI.Host
 	r.URL.Path = proxyURI.Path + r.URL.Path
-	delete(q, "proxy_token")
-	delete(q, "proxy_base")
-	r.URL.RawQuery = q.Encode()
 	if r.URL.RawQuery != "" {
 		r.RequestURI = r.URL.Path + "?" +  r.URL.RawQuery
 	} else {
