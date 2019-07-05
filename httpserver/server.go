@@ -41,7 +41,7 @@ var (
 	spa        = flag.Bool("spa", true, "is is a single page app?")
 	cert       = flag.String("cert", "", "ssl cert")
 	key        = flag.String("key", "", "ssl key")
-	proxyToken        = flag.String("proxy_token", "xxx", "proxy token")
+	proxyToken        = flag.String("proxy_token", "", "proxy token")
 )
 
 func main() {
