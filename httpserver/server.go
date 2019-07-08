@@ -33,14 +33,15 @@ import (
 var (
 	port       = flag.Int("p", 8080, "port to listen")
 	logBody    = flag.Bool("l", false, "write http body log on std out")
-	cors    = flag.Bool("cors", true, "enable cors?")
+	cors       = flag.Bool("cors", true, "enable cors?")
 	decodeBody = flag.Bool("b", true, "decode as struct")
 	dir        = flag.String("d", "./", "dir to server")
-	showInfo   = flag.Bool("info", false, "show info router")
 	spa        = flag.Bool("spa", true, "is is a single page app?")
+	host       = flag.String("host", "", "ssl cert")
 	cert       = flag.String("cert", "", "ssl cert")
 	key        = flag.String("key", "", "ssl key")
-	proxyToken        = flag.String("proxy_token", "", "proxy token")
+	proxyToken = flag.String("proxy_token", "", "proxy token")
+	infoFirst  = flag.Bool("info", false, "default router to show the info")
 )
 
 func main() {
@@ -55,12 +56,18 @@ func main() {
 		scheme = "https"
 	}
 	fmt.Printf("Starting up http-server, serving \u001b[36m%s \u001b[0m \nAvailable on:\n", *dir)
-	addrs, _ := net.InterfaceAddrs()
-	for _, rawAddr := range addrs {
-		if ipnet, ok := rawAddr.(*net.IPNet); ok && ipnet.IP.To4() != nil {
-			fmt.Printf("\t\u001b[34m%s://%s:%d\u001b[0m\n", scheme, ipnet.IP.To4().String(), *port)
+
+	if *host == "" {
+		addrs, _ := net.InterfaceAddrs()
+		for _, rawAddr := range addrs {
+			if ipnet, ok := rawAddr.(*net.IPNet); ok && ipnet.IP.To4() != nil {
+				fmt.Printf("\t\u001b[34m%s://%s:%d\u001b[0m\n", scheme, ipnet.IP.To4().String(), *port)
+			}
 		}
+	} else {
+		fmt.Printf("\t\u001b[34m%s://%s:%d\u001b[0m\n", scheme, *host, *port)
 	}
+
 	fmt.Println("Hit CTRL-C to stop the server")
 
 	mux := grpcmux.NewServeMux()
@@ -72,32 +79,27 @@ func main() {
 	reflection.Register(gs)
 	fs := fileServer(*dir)
 	runtime.OtherErrorHandler = func(w http.ResponseWriter, r *http.Request, msg string, code int) {
-		if *showInfo {
-			if strings.HasPrefix(r.URL.Path, "/www/") {
-				http.StripPrefix("/www/", fs).ServeHTTP(w, r)
-			} else if r.URL.Path == "/" {
-				http.Redirect(w, r, "/www/", http.StatusFound)
-			} else {
-				httpInfo(w, r)
-			}
-		} else {
-			if strings.HasPrefix(r.URL.Path, "/_info/") {
-				r.URL.Path = strings.TrimPrefix(r.URL.Path, "/_info/")
-				r.RequestURI = strings.TrimPrefix(r.RequestURI, "/_info/")
-				httpInfo(w, r)
-			} else {
-				fs.ServeHTTP(w, r)
-			}
-		}
+		http.DefaultServeMux.ServeHTTP(w, r)
+	}
+	http.Handle("/_proxy/", StripPrefix("/_proxy", http.HandlerFunc(Proxy)))
+	http.Handle("/_info/", StripPrefix("/_info", http.HandlerFunc(httpInfo)))
+	http.Handle("/_www/", StripPrefix("/_www", fs))
+	http.Handle("/.well-known/", fs)
+
+	if (*infoFirst) {
+		http.Handle("/", http.HandlerFunc(httpInfo))
+	} else {
+		http.Handle("/", fs)
 	}
 
 	handler := GRPCMixHandler(mux, gs)
-	http.Handle("/_proxy/", http.StripPrefix("/_proxy", http.HandlerFunc(Proxy)))
-	http.Handle("/_info/", http.StripPrefix("/_info", http.HandlerFunc(httpInfo)))
-	http.Handle("/", handler)
-	panic(http.Serve(listener, nil))
-}
+	if scheme == "https" {
+		panic(http.ServeTLS(listener, handler, *cert, *key))
+	} else {
+		panic(http.Serve(listener, handler))
+	}
 
+}
 
 func Proxy(w http.ResponseWriter, r *http.Request) {
 	var base, token string
@@ -148,7 +150,7 @@ func Proxy(w http.ResponseWriter, r *http.Request) {
 	r.URL.Host = proxyURI.Host
 	r.URL.Path = proxyURI.Path + r.URL.Path
 	if r.URL.RawQuery != "" {
-		r.RequestURI = r.URL.Path + "?" +  r.URL.RawQuery
+		r.RequestURI = r.URL.Path + "?" + r.URL.RawQuery
 	} else {
 		r.RequestURI = r.URL.Path
 	}
@@ -167,7 +169,7 @@ func Proxy(w http.ResponseWriter, r *http.Request) {
 	defer resp.Body.Close()
 	b, err := ioutil.ReadAll(resp.Body)
 	delete(resp.Header, "Content-Length")
-	for k,_ := range resp.Header {
+	for k, _ := range resp.Header {
 		w.Header().Set(k, resp.Header.Get(k))
 	}
 	w.WriteHeader(resp.StatusCode)
@@ -182,8 +184,6 @@ func Proxy(w http.ResponseWriter, r *http.Request) {
 		w.Write(b)
 	}
 }
-
-
 
 func fileServer(dir string) http.Handler {
 	absPath, err := filepath.Abs(dir)
@@ -333,11 +333,9 @@ func getRequestInfo(r *http.Request) *request {
 }
 
 func httpInfo(w http.ResponseWriter, r *http.Request) {
-	req, ok := r.Context().Value(requestKey{}).(*request)
-	if !ok {
-		req = getRequestInfo(r)
-	}
+	req := getRequestInfo(r)
 	resp, _ := json.MarshalIndent(req, "", "\t")
+
 	if strings.HasSuffix(r.URL.Path, ".html") {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		fmt.Fprintf(w, "<html><head><title>%s</title><head/><h1>%s</h1><pre>%s</pre></html>", "Request Infos", "Request Infos", string(resp))
@@ -369,7 +367,7 @@ func getIP(r *http.Request) net.IP {
 func GRPCMixHandler(h http.Handler, grpc *grpc.Server) http.Handler {
 	mix := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if *cors {
-			enableCors(w,r)
+			enableCors(w, r)
 		}
 		req := getRequestInfo(r)
 		log("grpc_mix", req)
@@ -448,4 +446,28 @@ var strToCode = map[string]codes.Code{
 	"unavailable":           codes.Unavailable,
 	"data_loss":             codes.DataLoss,
 	"uauthenticated":        codes.Unauthenticated,
+}
+
+// StripPrefix returns a handler that serves HTTP requests
+// by removing the given prefix from the request URL's Path
+// and invoking the handler h. StripPrefix handles a
+// request for a path that doesn't begin with prefix by
+// replying with an HTTP 404 not found error.
+func StripPrefix(prefix string, h http.Handler) http.Handler {
+	if prefix == "" {
+		return h
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if p := strings.TrimPrefix(r.URL.Path, prefix); len(p) < len(r.URL.Path) {
+			r2 := new(http.Request)
+			*r2 = *r
+			r2.URL = new(url.URL)
+			*r2.URL = *r.URL
+			r2.RequestURI = strings.TrimPrefix(r.RequestURI, prefix)
+			r2.URL.Path = p
+			h.ServeHTTP(w, r2)
+		} else {
+			http.NotFound(w, r)
+		}
+	})
 }

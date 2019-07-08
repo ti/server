@@ -4,28 +4,48 @@ import (
 	"encoding/json"
 	"flag"
 	"github.com/sirupsen/logrus"
-	 pb "github.com/ti/server/httpserver/pb"
+	pb "github.com/ti/server/httpserver/pb"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"net/url"
+	"strings"
 )
 
 var (
-	addr       = flag.String("addr", "127.0.0.1:8080", "grpc addr")
-	reqType    = flag.String("type", "info", "req type")
+	addr    = flag.String("addr", "http://127.0.0.1:8080", "grpc addr")
+	reqType = flag.String("type", "info", "req type")
 )
 
 func main() {
 	flag.Parse()
-	conn, err := grpc.Dial(*addr, grpc.WithInsecure())
+	var err error
+	uri := &url.URL{}
+	if strings.Contains(*addr, "://") {
+		uri, err = url.Parse(*addr)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		uri.Scheme = "http"
+		uri.Host = *addr
+	}
+	var grpcDialOption grpc.DialOption
+	if strings.HasSuffix(uri.Scheme, "s") {
+		grpcDialOption = grpc.WithTransportCredentials(credentials.NewTLS(nil))
+	} else {
+		grpcDialOption = grpc.WithInsecure()
+	}
+	conn, err := grpc.Dial(uri.Host, grpcDialOption)
 	if err != nil {
 		logrus.Fatalf("did not connect: %v", err)
 	}
 	defer conn.Close()
 	c := pb.NewServerClient(conn)
 	md := metadata.New(map[string]string{
-		"authorization":       "Bearer 7AUaDMwP98B39hJTH5eJPxylo",
+		"authorization": "Bearer 7AUaDMwP98B39hJTH5eJPxylo",
 	})
 	mdCtx := metadata.NewOutgoingContext(context.Background(), md)
 	r, err := c.Info(mdCtx, &pb.Request{Type: *reqType})
@@ -41,7 +61,7 @@ func main() {
 	}
 	if r.Data["Request"] != nil && len(r.Data["Request"].List) > 0 {
 		logrus.Info(r.Data["Request"].List[0])
-		delete(r.Data,"Request")
+		delete(r.Data, "Request")
 	}
 	b, _ := json.Marshal(r.Data)
 	logrus.Info(string(b))
