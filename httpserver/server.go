@@ -40,7 +40,7 @@ var (
 	host       = flag.String("host", "", "ssl cert")
 	cert       = flag.String("cert", "", "ssl cert")
 	key        = flag.String("key", "", "ssl key")
-	proxyToken = flag.String("proxy_token", "123", "proxy token")
+	proxyToken = flag.String("proxy_token", "", "proxy token")
 	mode       = flag.String("mode", "file", "default router mode [file, info, proxy]")
 )
 
