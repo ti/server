@@ -40,8 +40,8 @@ var (
 	host       = flag.String("host", "", "ssl cert")
 	cert       = flag.String("cert", "", "ssl cert")
 	key        = flag.String("key", "", "ssl key")
-	proxyToken = flag.String("proxy_token", "", "proxy token")
-	infoFirst  = flag.Bool("info", false, "default router to show the info")
+	proxyToken = flag.String("proxy_token", "123", "proxy token")
+	mode       = flag.String("mode", "file", "default router mode [file, info, proxy]")
 )
 
 func main() {
@@ -81,14 +81,19 @@ func main() {
 	runtime.OtherErrorHandler = func(w http.ResponseWriter, r *http.Request, msg string, code int) {
 		http.DefaultServeMux.ServeHTTP(w, r)
 	}
-	http.Handle("/_proxy/", StripPrefix("/_proxy", http.HandlerFunc(Proxy)))
+	http.Handle("/_proxy/", StripPrefix("/_proxy", http.HandlerFunc(proxy)))
 	http.Handle("/_info/", StripPrefix("/_info", http.HandlerFunc(httpInfo)))
 	http.Handle("/_www/", StripPrefix("/_www", fs))
 	http.Handle("/.well-known/", fs)
 
-	if (*infoFirst) {
+	switch *mode {
+	case "file":
+		http.Handle("/", fs)
+	case "info":
 		http.Handle("/", http.HandlerFunc(httpInfo))
-	} else {
+	case "proxy":
+		http.Handle("/", http.HandlerFunc(proxy))
+	default:
 		http.Handle("/", fs)
 	}
 
@@ -101,59 +106,88 @@ func main() {
 
 }
 
-func Proxy(w http.ResponseWriter, r *http.Request) {
-	var base, token string
-	if strings.HasPrefix(r.URL.Path, "/base/") {
-		host := r.URL.Path[6:]
-		idx := strings.Index(host, "/")
+func proxy(w http.ResponseWriter, r *http.Request) {
+	tokenName := "/token/"
+	var token string
+	if strings.HasPrefix(r.URL.Path, tokenName) {
+		tokenLen := len(tokenName)
+		idx := strings.Index(r.URL.Path[tokenLen:], "/")
 		if idx < 0 {
-			idx = len(host)
+			idx = len(r.URL.Path[tokenLen:])
 		}
-		base = host[0:idx]
-		if h, err := base64.RawURLEncoding.DecodeString(base); err == nil {
-			base = string(h)
+		endIndex := tokenLen + idx
+		token = r.URL.Path[tokenLen:endIndex]
+		noPath := len(r.URL.Path) == endIndex
+		r.URL.Path = r.URL.Path[endIndex:]
+		r.RequestURI = r.RequestURI[endIndex:]
+		if noPath {
+			r.URL.Path = "/"
+			r.RequestURI = "/" + r.RequestURI
 		}
-		if !strings.HasPrefix(base, "http") {
-			base = "https://" + base
-		}
-		r.URL.Path = host[idx:]
-		if strings.HasPrefix(r.URL.Path, "/token/") {
-			r.URL.Path = r.URL.Path[7:]
-			idx := strings.Index(r.URL.Path, "/")
-			if idx < 0 {
-				idx = len(r.URL.Path)
-			}
-			token = r.URL.Path[0:idx]
-			r.URL.Path = r.URL.Path[idx:]
-		}
-	}
-	if base == "" {
-		q := r.URL.Query()
-		token = q.Get("proxy_token")
-		base = q.Get("proxy_base")
-		delete(q, "proxy_token")
-		delete(q, "proxy_base")
-		r.URL.RawQuery = q.Encode()
 	}
 	if token != *proxyToken {
-		http.Error(w, "token not match", 403)
+		http.Error(w, "token does not match", 403)
 		return
 	}
-
-	proxyURI, err := url.Parse(base)
-	if err != nil || proxyURI.Scheme == "" || proxyURI.Host == "" {
-		http.Error(w, "base not found", 404)
-		return
+	if r.URL.Scheme == "" {
+		r.URL.Scheme = "http"
 	}
-	r.Host = proxyURI.Host
-	r.URL.Scheme = proxyURI.Scheme
-	r.URL.Host = proxyURI.Host
-	r.URL.Path = proxyURI.Path + r.URL.Path
-	if r.URL.RawQuery != "" {
-		r.RequestURI = r.URL.Path + "?" + r.URL.RawQuery
+	if r.TLS != nil {
+		r.URL.Scheme = "https"
+	}
+	if strings.HasPrefix(r.URL.Path, "/http:/") {
+		r.URL.Path = r.URL.Path[6:]
+		r.RequestURI = r.RequestURI[6:]
+		r.URL.Scheme = "http"
+	} else if strings.HasPrefix(r.URL.Path, "/https:/") {
+		r.URL.Path = r.URL.Path[7:]
+		r.RequestURI = r.RequestURI[7:]
+		r.URL.Scheme = "https"
+	}
+	pastHostIndex := strings.Index(r.URL.Path[1:], "/")
+	if pastHostIndex < 0 {
+		pastHostIndex = len(r.URL.Path)
 	} else {
-		r.RequestURI = r.URL.Path
+		pastHostIndex += 1
 	}
+	host := r.URL.Path[1:pastHostIndex]
+	if host == "favicon.ico" {
+		return
+	}
+	proxyURL := r.URL.Scheme + ":/" + r.URL.Path
+	logrus.WithFields(logrus.Fields{"type": "proxy"}).Info(proxyURL)
+	endIndex := strings.Index(r.URL.Path[1:], "/") + 1
+	if endIndex < 1 {
+		endIndex = len(r.URL.Path)
+	}
+	if h, err := base64.RawURLEncoding.DecodeString(host); err == nil {
+		hostDecoded := string(h)
+		if strings.HasPrefix(hostDecoded, "https://") {
+			r.URL.Scheme = "https"
+			host = hostDecoded[8:]
+			proxyURL = hostDecoded + r.URL.Path[pastHostIndex:]
+		} else if strings.HasPrefix(hostDecoded, "http://") {
+			r.URL.Scheme = "http"
+			host = hostDecoded[7:]
+			proxyURL = hostDecoded + r.URL.Path[pastHostIndex:]
+		} else {
+			host = hostDecoded
+			proxyURL = r.URL.Scheme + "://" + hostDecoded + r.URL.Path[pastHostIndex:]
+		}
+	}
+	if host == "" {
+		http.Error(w, "host not found", 404)
+		return
+	}
+	noPath := len(r.URL.Path) == endIndex
+	r.URL.Path = r.URL.Path[endIndex:]
+	r.RequestURI = r.RequestURI[endIndex:]
+	if noPath {
+		r.URL.Path = "/"
+		r.RequestURI = "/" + r.RequestURI
+	}
+	r.URL.Host = host
+	r.Host = host
 	body, err := ioutil.ReadAll(r.Body)
 	req, err := http.NewRequest(r.Method, r.URL.String(), ioutil.NopCloser(bytes.NewBuffer(body)))
 	if err != nil {
@@ -176,12 +210,12 @@ func Proxy(w http.ResponseWriter, r *http.Request) {
 	if resp.StatusCode != 200 {
 		x := string(b)
 		if len(x) == 0 {
-			w.Write([]byte("{}"))
+			_, _ = w.Write([]byte("{}"))
 		} else {
-			w.Write(b)
+			_, _ = w.Write(b)
 		}
 	} else {
-		w.Write(b)
+		_, _ = w.Write(b)
 	}
 }
 
