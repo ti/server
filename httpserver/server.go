@@ -129,12 +129,7 @@ func proxy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "token does not match", 403)
 		return
 	}
-	if r.URL.Scheme == "" {
-		r.URL.Scheme = "http"
-	}
-	if r.TLS != nil {
-		r.URL.Scheme = "https"
-	}
+	r.URL.Scheme = "https"
 	if strings.HasPrefix(r.URL.Path, "/http:/") {
 		r.URL.Path = r.URL.Path[6:]
 		r.RequestURI = r.RequestURI[6:]
