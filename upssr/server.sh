@@ -3,7 +3,7 @@
 docker run  --restart always --name ssr  -d -p  10800:80  nanxi/ssr -s ss://AES-256-CFB:password@:80
 
 # or use v2ray
-docker run  --restart always -it -d --name v2ray -v ./v2ray:/etc/v2ray -p 443:8888 -p 80:6666 v2ray/official
+docker run  --restart always -it -d --name v2ray -v v2ray:/etc/v2ray -p 443:8888 -p 80:6666 v2ray/official
 
 #mkdir v2ray
 # v2ray/config.json
