@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+docker run --restart always --name ss -e PASSWORD=pass -e METHOD=aes-128-gcm -p 443:8388 -p 443:8388/udp -d shadowsocks/shadowsocks-libev
+ 
 docker run  --restart always --name ssr  -d -p  10800:80  nanxi/ssr -s ss://AES-256-CFB:password@:80
 
 # or use v2ray
