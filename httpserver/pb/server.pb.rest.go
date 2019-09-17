@@ -3,14 +3,10 @@
 
 package info
 
-
-import _ "github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger/options"
-import _ "google.golang.org/genproto/googleapis/api/annotations"
-
 import (
 	runtime "github.com/grpc-ecosystem/grpc-gateway/runtime"
-	grpc "google.golang.org/grpc"
 	context "golang.org/x/net/context"
+	grpc "google.golang.org/grpc"
 )
 
 
@@ -25,6 +21,10 @@ func RegisterServerServerHandlerClient(ctx context.Context, mux *runtime.ServeMu
 
 func (h *serverServerClient) Info(ctx context.Context, in *Request, _ ...grpc.CallOption) (*Response, error) {
 	return h.srv.Info(ctx, in)
+}
+
+func (h *serverServerClient) Post(ctx context.Context, in *Request, _ ...grpc.CallOption) (*Response, error) {
+	return h.srv.Post(ctx, in)
 }
 
 func NewServerServerClient(srv ServerServer) ServerClient {

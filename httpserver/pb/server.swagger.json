@@ -6,6 +6,7 @@
     "version": "1.0.0"
   },
   "schemes": [
+    "http",
     "https"
   ],
   "consumes": [
@@ -21,7 +22,7 @@
         "operationId": "Info",
         "responses": {
           "200": {
-            "description": "",
+            "description": "A successful response.",
             "schema": {
               "$ref": "#/definitions/infoResponse"
             }
@@ -33,6 +34,50 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "message",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "code",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "Server"
+        ]
+      },
+      "post": {
+        "summary": "Post",
+        "operationId": "Post",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/infoResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "type",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/infoRequest"
+            }
           }
         ],
         "tags": [
@@ -53,9 +98,34 @@
         }
       }
     },
+    "infoRequest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "description": "The parameters to Server.Info."
+    },
     "infoResponse": {
       "type": "object",
       "properties": {
+        "request": {
+          "$ref": "#/definitions/infoRequest"
+        },
         "data": {
           "type": "object",
           "additionalProperties": {

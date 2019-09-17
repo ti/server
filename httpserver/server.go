@@ -84,6 +84,7 @@ func main() {
 	http.Handle("/_proxy/", StripPrefix("/_proxy", http.HandlerFunc(proxy)))
 	http.Handle("/_info/", StripPrefix("/_info", http.HandlerFunc(httpInfo)))
 	http.Handle("/_www/", StripPrefix("/_www", fs))
+	http.Handle("/_r/", StripPrefix("/_r", http.HandlerFunc(httpRedirect)))
 	http.Handle("/.well-known/", fs)
 
 	switch *mode {
@@ -361,6 +362,28 @@ func getRequestInfo(r *http.Request) *request {
 	return &req
 }
 
+func httpRedirect(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	redirectURI := query.Get("redirect_uri")
+	if (redirectURI) == "" {
+		w.Write([]byte("redirect_uri not found in url params"))
+		return
+	}
+	uri, err := url.Parse(redirectURI)
+	if err != nil {
+		w.Write([]byte("redirect_uri error -" + err.Error()))
+		return
+	}
+	delete(query, "redirect_uri")
+	redirectQuery := uri.Query()
+	for k,v := range query {
+		redirectQuery[k] = v
+	}
+	uri.RawQuery = redirectQuery.Encode()
+	http.Redirect(w,r, uri.String(), 302)
+}
+
+
 func httpInfo(w http.ResponseWriter, r *http.Request) {
 	req := getRequestInfo(r)
 	resp, _ := json.MarshalIndent(req, "", "\t")
@@ -415,8 +438,17 @@ type service struct{}
 
 type requestKey struct{}
 
-func (h *service) Info(ctx context.Context, in *pb.Request) (*pb.Response, error) {
+
+func (s *service) Post(ctx context.Context, in *pb.Request) (*pb.Response, error) {
+	return grpcInfo(ctx, in)
+}
+func (s *service) Info(ctx context.Context, in *pb.Request) (*pb.Response, error) {
+	return grpcInfo(ctx, in)
+}
+
+func grpcInfo(ctx context.Context, in *pb.Request) (*pb.Response, error) {
 	resp := &pb.Response{
+		Request: in,
 		Data: make(map[string]*pb.Response_List),
 	}
 	defer func() {

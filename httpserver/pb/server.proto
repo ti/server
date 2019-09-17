@@ -11,33 +11,40 @@ option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
         version : "1.0.0"
         description: "a service to print http or grpc request "
     };
-    schemes: HTTPS
-    consumes: "application/json"
-    produces: "application/json"
 };
-
 
 // Service for a server to get request info
 service Server {
-    // Get grpc request infos
-    rpc Info (Request) returns (Response) {
-        option (google.api.http) = {
-			get: "/v1/{type}"
+	// Get grpc request infos
+	rpc Info (Request) returns (Response) {
+		option (google.api.http) = {
+			get: "/v1/{type=**}"
 		};
-    }
+	}
+	// Post
+	rpc Post (Request) returns (Response) {
+		option (google.api.http) = {
+			post: "/v1/{type=**}"
+			body: "*"
+		};
+	}
 }
 
 // The parameters to Server.Info.
 message Request {
-    string type = 1;
+	string type = 1;
+	string message = 2;
+	map<string, string> meta = 3;
+	int32 code = 4;
 }
 
 // The Response to Server.Info.
 message Response {
-    message List {
-        repeated string list = 1;
-    }
-    map<string, List> data = 1;
+	message List {
+		repeated string list = 1;
+	}
+	Request request = 2;
+	map<string, List> data = 3;
 }
 
 
