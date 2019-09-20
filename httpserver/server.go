@@ -28,6 +28,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"github.com/elazarl/goproxy"
+	"github.com/elazarl/goproxy/ext/auth"
 )
 
 var (
@@ -41,6 +43,7 @@ var (
 	cert       = flag.String("cert", "", "ssl cert")
 	key        = flag.String("key", "", "ssl key")
 	proxyToken = flag.String("proxy_token", "", "proxy token")
+    proxyUserName = flag.String("proxy_username", "", "proxy username")
 	mode       = flag.String("mode", "file", "default router mode [file, info, proxy]")
 )
 
@@ -51,6 +54,21 @@ func main() {
 		fmt.Printf("\u001b[31m[ERROR] %s\u001b[0m\n", err)
 		return
 	}
+	if *mode == "proxy" {
+		go func() {
+			proxy := goproxy.NewProxyHttpServer()
+			proxy.Verbose = *logBody
+			if *proxyUserName != "" && *proxyToken != "" {
+				auth.ProxyBasic(proxy, "proxy_realm", func(user, pwd string) bool {
+					return user == *proxyUserName && pwd == *proxyToken
+				})
+			}
+			proxyPort := *port + 1
+			fmt.Println("serving end proxy server at " + fmt.Sprintf(":%d", proxyPort))
+			panic(http.ListenAndServe(fmt.Sprintf(":%d", proxyPort), proxy))
+		}()
+	}
+
 	scheme := "http"
 	if *cert != "" && *key != "" {
 		scheme = "https"
@@ -104,7 +122,6 @@ func main() {
 	} else {
 		panic(http.Serve(listener, handler))
 	}
-
 }
 
 func proxy(w http.ResponseWriter, r *http.Request) {
