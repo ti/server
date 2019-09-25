@@ -37,15 +37,14 @@ RUN apt-get -y install traceroute \
     curl \
     wget \
     redis-server \
-    mysql-server \
-    postgresql \
-    postgresql-contrib \
     shadowsocks-libev \
     jq \
     apt-transport-https \
     gnupg-agent \
     software-properties-common
 
+
+# mongo
 RUN curl https://www.mongodb.org/static/pgp/server-4.2.asc -o mongodb.asc
 RUN /usr/bin/apt-key add mongodb.asc
 RUN /bin/rm mongodb.asc
@@ -53,7 +52,33 @@ RUN /bin/echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu bionic/mon
 RUN apt-get update
 RUN apt-get install -y mongodb-org
 
-COPY --from=0 /etc/ssl/certs/ /etc/ssl/certs/
+# postgres
+RUN curl https://www.postgresql.org/media/keys/ACCC4CF8.asc -o pg.asc
+RUN /usr/bin/apt-key add pg.asc
+RUN /bin/rm pg.asc
+RUN apt-get update
+RUN apt-get install -y postgresql-11 postgresql-client-11
+
+# mysql
+RUN curl https://repo.mysql.com//mysql-apt-config_0.8.13-1_all.deb -o mysql.deb
+RUN dpkg -i mysql.deb
+RUN /bin/rm mysql.deb
+RUN apt-get update
+RUN apt install -y mysql-server mysql-client
+
+# docker
+RUN curl https://download.docker.com/linux/debian/gpg -o docker.asc
+RUN /usr/bin/apt-key add docker.asc
+RUN /bin/rm docker.asc
+RUN add-apt-repository \
+       "deb [arch=amd64] https://download.docker.com/linux/debian \
+       $(lsb_release -cs) \
+       stable"
+RUN apt-get update
+RUN apt install -y docker-ce
+
+ENV GO111MODULE on
+ENV GOPROXY=https://goproxy.io
 COPY --from=0 /go/bin/httpserver /app/main
 COPY --from=0 /go/bin/client /app/client
 COPY --from=0 /go/src/github.com/ti/server/httpserver/www /app/www
