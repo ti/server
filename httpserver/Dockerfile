@@ -10,10 +10,12 @@ RUN go install -ldflags '-s -w'
 WORKDIR /go/src/github.com/ti/server/httpserver/client
 RUN go install -ldflags '-s -w'
 
-FROM ubuntu:18.04
+FROM golang:1.13.0
 RUN apt-get update
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get -y install traceroute \
+    autoconf build-essential libcurl4-gnutls-dev libxml2-dev libssl-dev \
+    automake build-base c-ares-dev libev-dev libtool libsodium-dev linux-headers mbedtls-dev pcre-dev \
     dnsutils \
     apt-utils\
     tree\
@@ -21,6 +23,7 @@ RUN apt-get -y install traceroute \
     iputils-ping \
     netcat-openbsd \
     wget \
+    telnet \
     curl \
     bash \
     htop \
@@ -28,7 +31,6 @@ RUN apt-get -y install traceroute \
     nmap \
     iperf \
     gnupg2 \
-    golang \
     net-tools \
     openssh-client \
     git \
@@ -41,7 +43,10 @@ RUN apt-get -y install traceroute \
     postgresql-contrib \
     docker \
     shadowsocks-libev \
-    jq
+    jq \
+    apt-transport-https \
+    gnupg-agent \
+    software-properties-common
 
 RUN curl https://www.mongodb.org/static/pgp/server-4.2.asc -o mongodb.asc
 RUN /usr/bin/apt-key add mongodb.asc
