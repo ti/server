@@ -14,8 +14,7 @@ FROM golang:1.13.0
 RUN apt-get update
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get -y install traceroute \
-    autoconf build-essential libcurl4-gnutls-dev libxml2-dev libssl-dev \
-    automake build-base c-ares-dev libev-dev libtool libsodium-dev linux-headers mbedtls-dev pcre-dev \
+    autoconf build-essential libcurl4-gnutls-dev libxml2-dev libssl-dev automake libev-dev libtool libsodium-dev \
     dnsutils \
     apt-utils\
     tree\
