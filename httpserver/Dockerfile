@@ -41,7 +41,6 @@ RUN apt-get -y install traceroute \
     mysql-server \
     postgresql \
     postgresql-contrib \
-    docker \
     shadowsocks-libev \
     jq \
     apt-transport-https \
