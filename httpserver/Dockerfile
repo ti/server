@@ -39,6 +39,8 @@ RUN apt-get -y install traceroute \
     mysql-server \
     postgresql \
     postgresql-contrib \
+    docker \
+    shadowsocks-libev \
     jq
 
 RUN curl https://www.mongodb.org/static/pgp/server-4.2.asc -o mongodb.asc
