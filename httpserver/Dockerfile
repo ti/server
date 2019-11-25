@@ -10,7 +10,7 @@ RUN go install -ldflags '-s -w'
 WORKDIR /go/src/github.com/ti/server/httpserver/client
 RUN go install -ldflags '-s -w'
 
-FROM golang:1.13.0
+FROM golang:1.13.4
 RUN apt-get update
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get -y install traceroute \
