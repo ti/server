@@ -58,6 +58,7 @@ RUN apt-get install -y mongodb-org
 RUN curl https://www.postgresql.org/media/keys/ACCC4CF8.asc -o pg.asc
 RUN /usr/bin/apt-key add pg.asc
 RUN /bin/rm pg.asc
+RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" | tee  /etc/apt/sources.list.d/pgdg.list
 RUN apt-get update
 RUN apt-get install -y postgresql-12 postgresql-client-12
 
