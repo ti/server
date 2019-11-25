@@ -84,8 +84,10 @@ RUN apt install -y docker-ce
 RUN mkdir /tf/
 WORKDIR /tf/
 RUN pip3 install -U virtualenv
-RUN pip3 install --upgrade pip
-RUN pip3 install --upgrade tensorflow
+RUN pip3 install --no-cache-dir install --upgrade \
+    pip \
+    setuptools \
+    tensorflow
 RUN virtualenv --system-site-packages -p python3 ./venv
 
 ENV GO111MODULE on
