@@ -82,11 +82,9 @@ RUN apt install -y docker-ce
 RUN mkdir /tf/
 WORKDIR /tf/
 RUN pip3 install -U virtualenv
+RUN pip3 install --upgrade pip
+RUN pip3 install --upgrade tensorflow
 RUN virtualenv --system-site-packages -p python3 ./venv
-RUN source ./venv/bin/activate
-RUN pip install --upgrade pip
-RUN pip install --upgrade tensorflow
-
 
 ENV GO111MODULE on
 ENV GOPROXY=https://goproxy.io
