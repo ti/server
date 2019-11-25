@@ -91,6 +91,9 @@ RUN virtualenv --system-site-packages -p python3 ./venv
 # java
 RUN apt-get install -y default-jdk
 
+# clean
+RUN apt-get autoclean
+
 ENV GO111MODULE on
 ENV GOPROXY=https://goproxy.io
 COPY --from=0 /go/bin/httpserver /app/main
