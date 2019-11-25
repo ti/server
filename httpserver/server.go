@@ -9,43 +9,49 @@ import (
 	"flag"
 	"fmt"
 	"github.com/clbanning/mxj"
+	"github.com/elazarl/goproxy"
+	"github.com/elazarl/goproxy/ext/auth"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/sirupsen/logrus"
 	"github.com/ti/noframe/grpcmux"
 	pb "github.com/ti/server/httpserver/pb"
+	"golang.org/x/net/context/ctxhttp"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
+	"golang.org/x/net/proxy"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 	"io/ioutil"
+	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
-	"github.com/elazarl/goproxy"
-	"github.com/elazarl/goproxy/ext/auth"
 )
 
 var (
-	port       = flag.Int("p", 8080, "port to listen")
-	logBody    = flag.Bool("l", false, "write http body log on std out")
-	cors       = flag.Bool("cors", true, "enable cors?")
-	decodeBody = flag.Bool("b", true, "decode as struct")
-	dir        = flag.String("d", "./", "dir to server")
-	spa        = flag.Bool("spa", true, "is is a single page app?")
-	host       = flag.String("host", "", "ssl cert")
-	cert       = flag.String("cert", "", "ssl cert")
-	key        = flag.String("key", "", "ssl key")
-	proxyToken = flag.String("proxy_token", "", "proxy token")
-    proxyUserName = flag.String("proxy_username", "", "proxy username")
-	mode       = flag.String("mode", "file", "default router mode [file, info, proxy]")
+	port          = flag.Int("p", 8080, "port to listen")
+	logBody       = flag.Bool("l", false, "write http body log on std out")
+	cors          = flag.Bool("cors", true, "enable cors?")
+	decodeBody    = flag.Bool("b", true, "decode as struct")
+	dir           = flag.String("d", "./", "dir to server")
+	spa           = flag.Bool("spa", true, "is is a single page app?")
+	host          = flag.String("host", "", "ssl cert")
+	cert          = flag.String("cert", "", "ssl cert")
+	key           = flag.String("key", "", "ssl key")
+	proxyURL      = flag.String("proxy", "", "http client will be proxy by something")
+	proxyToken    = flag.String("proxy_token", "", "proxy token")
+	proxyUserName = flag.String("proxy_username", "", "proxy username")
+	mode          = flag.String("mode", "file", "default router mode [file, info, proxy]")
 )
+
 
 func main() {
 	flag.Parse()
@@ -54,18 +60,36 @@ func main() {
 		fmt.Printf("\u001b[31m[ERROR] %s\u001b[0m\n", err)
 		return
 	}
+	if *proxyURL != "" {
+		proxyURI, err := url.Parse(*proxyURL)
+		if err != nil {
+			panic(err)
+		}
+		if proxyURI.Scheme == "socks5" {
+			dialer, err := proxy.SOCKS5("tcp", proxyURI.Host, nil, proxy.Direct)
+			if err != nil {
+				panic(err)
+			}
+			http.DefaultClient.Transport = &http.Transport{
+				DialContext: func(ctx context.Context, network, addr string) (conn net.Conn, e error) {
+					return dialer.Dial(network, addr)
+				},
+			}
+		}
+	}
+
 	if *mode == "proxy" {
 		go func() {
-			proxy := goproxy.NewProxyHttpServer()
-			proxy.Verbose = *logBody
+			proxyServer := goproxy.NewProxyHttpServer()
+			proxyServer.Verbose = *logBody
 			if *proxyUserName != "" && *proxyToken != "" {
-				auth.ProxyBasic(proxy, "proxy_realm", func(user, pwd string) bool {
+				auth.ProxyBasic(proxyServer, "proxy_realm", func(user, pwd string) bool {
 					return user == *proxyUserName && pwd == *proxyToken
 				})
 			}
 			proxyPort := *port + 1
 			fmt.Println("serving end proxy server at " + fmt.Sprintf(":%d", proxyPort))
-			panic(http.ListenAndServe(fmt.Sprintf(":%d", proxyPort), proxy))
+			panic(http.ListenAndServe(fmt.Sprintf(":%d", proxyPort), proxyServer))
 		}()
 	}
 
@@ -99,9 +123,10 @@ func main() {
 	runtime.OtherErrorHandler = func(w http.ResponseWriter, r *http.Request, msg string, code int) {
 		http.DefaultServeMux.ServeHTTP(w, r)
 	}
-	http.Handle("/_proxy/", StripPrefix("/_proxy", http.HandlerFunc(proxy)))
+	http.Handle("/_proxy/", StripPrefix("/_proxy", http.HandlerFunc(proxyHandler)))
 	http.Handle("/_info/", StripPrefix("/_info", http.HandlerFunc(httpInfo)))
 	http.Handle("/_www/", StripPrefix("/_www", fs))
+	http.Handle("/_health/", StripPrefix("/_health", http.HandlerFunc(httpClientCheck)))
 	http.Handle("/_r/", StripPrefix("/_r", http.HandlerFunc(httpRedirect)))
 	http.Handle("/.well-known/", fs)
 
@@ -111,7 +136,7 @@ func main() {
 	case "info":
 		http.Handle("/", http.HandlerFunc(httpInfo))
 	case "proxy":
-		http.Handle("/", http.HandlerFunc(proxy))
+		http.Handle("/", http.HandlerFunc(proxyHandler))
 	default:
 		http.Handle("/", fs)
 	}
@@ -124,7 +149,7 @@ func main() {
 	}
 }
 
-func proxy(w http.ResponseWriter, r *http.Request) {
+func proxyHandler(w http.ResponseWriter, r *http.Request) {
 	tokenName := "/token/"
 	var token string
 	if strings.HasPrefix(r.URL.Path, tokenName) {
@@ -393,13 +418,79 @@ func httpRedirect(w http.ResponseWriter, r *http.Request) {
 	}
 	delete(query, "redirect_uri")
 	redirectQuery := uri.Query()
-	for k,v := range query {
+	for k, v := range query {
 		redirectQuery[k] = v
 	}
 	uri.RawQuery = redirectQuery.Encode()
-	http.Redirect(w,r, uri.String(), 302)
+	http.Redirect(w, r, uri.String(), 302)
 }
 
+func httpClientCheck(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	state := q.Get("state")
+	if state == "" {
+		state = strconv.Itoa(rand.Intn(65535))
+	}
+	data := map[string]interface{}{
+		"state": state,
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	urls := q["url"]
+	if len(urls) == 0 {
+		urls = []string{"googleapis.com", "facebook.com"}
+	}
+	ctx := r.Context()
+	var status = 200
+	proxyData := make(map[string]interface{})
+	for _, v := range urls {
+		u, err := url.Parse(v)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("parse %s error %s", v, err), 400)
+			return
+		}
+		if u.Scheme == "" {
+			u.Scheme = "https"
+		}
+		host := u.Host
+		if host == "" {
+			host = u.Path
+		}
+		proxyError := make(map[string]string)
+		now := time.Now()
+		resp, err := ctxhttp.Get(ctx, http.DefaultClient, u.String())
+		if err != nil {
+			proxyError["error"] = err.Error()
+			status = 502
+		} else {
+			defer resp.Body.Close()
+			_, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				proxyError["error"] = err.Error()
+				status = 502
+			}
+			if !(resp.StatusCode == 200 || resp.StatusCode == 404) {
+				proxyError["status"] = strconv.Itoa(resp.StatusCode)
+			}
+		}
+		if status != 502 {
+			reqTime := time.Now().Sub(now)
+			if reqTime > 3 * time.Second {
+				status = 502
+			}
+			proxyError["time"] = fmt.Sprint(reqTime)
+		}
+		proxyData[host] = proxyError
+	}
+	data["http"] = proxyData
+	// display ip
+	data["remote_ip"] = getIP(r).String()
+	if status == 502 {
+		data["error"] = "unhealthy"
+		w.WriteHeader(status)
+	}
+	buf, _ := json.Marshal(data)
+	w.Write(buf)
+}
 
 func httpInfo(w http.ResponseWriter, r *http.Request) {
 	req := getRequestInfo(r)
@@ -455,7 +546,6 @@ type service struct{}
 
 type requestKey struct{}
 
-
 func (s *service) Post(ctx context.Context, in *pb.Request) (*pb.Response, error) {
 	return grpcInfo(ctx, in)
 }
@@ -466,7 +556,7 @@ func (s *service) Info(ctx context.Context, in *pb.Request) (*pb.Response, error
 func grpcInfo(ctx context.Context, in *pb.Request) (*pb.Response, error) {
 	resp := &pb.Response{
 		Request: in,
-		Data: make(map[string]*pb.Response_List),
+		Data:    make(map[string]*pb.Response_List),
 	}
 	defer func() {
 		log("grpc", resp)
