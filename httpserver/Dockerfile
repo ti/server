@@ -4,13 +4,12 @@ ENV CGO_ENABLED=0
 ENV GOOS=linux
 ENV GO111MODULE=on
 
-COPY ../ /go/src/github.com/ti/server/
+COPY ./ /go/src/github.com/ti/server/httpserver
 WORKDIR /go/src/github.com/ti/server/httpserver
 RUN go install -ldflags '-s -w'
 WORKDIR /go/src/github.com/ti/server/httpserver/client
 RUN go install -ldflags '-s -w'
-WORKDIR /go/src/github.com/ti/server/etcdrest
-RUN go install -ldflags '-s -w'
+RUN go get github.com/ti/server/etcdrest
 
 FROM golang:1.13.4
 RUN apt-get update
