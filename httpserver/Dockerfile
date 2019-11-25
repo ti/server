@@ -59,7 +59,7 @@ RUN curl https://www.postgresql.org/media/keys/ACCC4CF8.asc -o pg.asc
 RUN /usr/bin/apt-key add pg.asc
 RUN /bin/rm pg.asc
 RUN apt-get update
-RUN apt-get -y install postgresql-12 postgresql-client-12
+RUN apt-get install -y postgresql-12 postgresql-client-12
 
 # mysql
 RUN curl https://repo.mysql.com//mysql-apt-config_0.8.13-1_all.deb -o mysql.deb
