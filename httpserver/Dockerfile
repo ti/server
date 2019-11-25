@@ -88,7 +88,7 @@ RUN pip3 --no-cache-dir install --upgrade tensorflow
 RUN virtualenv --system-site-packages -p python3 ./venv
 
 # java
-RUN apt-get install default-jdk
+RUN apt-get install -y default-jdk
 
 ENV GO111MODULE on
 ENV GOPROXY=https://goproxy.io
