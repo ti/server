@@ -4,10 +4,12 @@ ENV CGO_ENABLED=0
 ENV GOOS=linux
 ENV GO111MODULE=on
 
-COPY . /go/src/github.com/ti/server/httpserver
+COPY ../ /go/src/github.com/ti/server/
 WORKDIR /go/src/github.com/ti/server/httpserver
 RUN go install -ldflags '-s -w'
 WORKDIR /go/src/github.com/ti/server/httpserver/client
+RUN go install -ldflags '-s -w'
+WORKDIR /go/src/github.com/ti/server/etcdrest
 RUN go install -ldflags '-s -w'
 
 FROM golang:1.13.4
@@ -90,6 +92,7 @@ ENV GO111MODULE on
 ENV GOPROXY=https://goproxy.io
 COPY --from=0 /go/bin/httpserver /app/main
 COPY --from=0 /go/bin/client /app/client
+COPY --from=0 /go/bin/etcdrest /app/etcdrest
 COPY --from=0 /go/src/github.com/ti/server/httpserver/www /app/www
 WORKDIR /app/
 CMD ["/app/main","-p", "8080", "-d", "www"]
