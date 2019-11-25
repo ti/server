@@ -14,6 +14,7 @@ FROM golang:1.13.4
 RUN apt-get update
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get -y install traceroute \
+    python3-dev python3-pip \
     autoconf build-essential libcurl4-gnutls-dev libxml2-dev libssl-dev automake libev-dev libtool libsodium-dev \
     dnsutils \
     apt-utils\
@@ -41,8 +42,8 @@ RUN apt-get -y install traceroute \
     jq \
     apt-transport-https \
     gnupg-agent \
-    software-properties-common
-
+    software-properties-common \
+    libreadline-gplv2-dev libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev zlib1g-dev
 
 # mongo
 RUN curl https://www.mongodb.org/static/pgp/server-4.2.asc -o mongodb.asc
@@ -76,6 +77,16 @@ RUN add-apt-repository \
        stable"
 RUN apt-get update
 RUN apt install -y docker-ce
+
+# TensorFlow
+RUN mkdir /tf/
+WORKDIR /tf/
+RUN pip3 install -U virtualenv
+RUN virtualenv --system-site-packages -p python3 ./venv
+RUN source ./venv/bin/activate
+RUN pip install --upgrade pip
+RUN pip install --upgrade tensorflow
+
 
 ENV GO111MODULE on
 ENV GOPROXY=https://goproxy.io
