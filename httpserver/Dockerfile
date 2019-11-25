@@ -82,12 +82,13 @@ RUN apt install -y docker-ce
 # TensorFlow
 RUN mkdir /tf/
 WORKDIR /tf/
-RUN pip3 install -U virtualenv
-RUN pip3 install --no-cache-dir install --upgrade \
-    pip \
-    setuptools \
-    tensorflow
+RUN pip3 --no-cache-dir install -U virtualenv
+RUN pip3 --no-cache-dir install --upgrade setuptools
+RUN pip3 --no-cache-dir install --upgrade tensorflow
 RUN virtualenv --system-site-packages -p python3 ./venv
+
+# java
+RUN apt-get install default-jdk
 
 ENV GO111MODULE on
 ENV GOPROXY=https://goproxy.io
