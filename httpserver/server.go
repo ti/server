@@ -52,7 +52,6 @@ var (
 	mode          = flag.String("mode", "file", "default router mode [file, info, proxy]")
 )
 
-
 func main() {
 	flag.Parse()
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
@@ -61,6 +60,7 @@ func main() {
 		return
 	}
 	if *proxyURL != "" {
+		fmt.Println("setting proxy")
 		proxyURI, err := url.Parse(*proxyURL)
 		if err != nil {
 			panic(err)
@@ -425,6 +425,7 @@ func httpRedirect(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, uri.String(), 302)
 }
 
+
 func httpClientCheck(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	state := q.Get("state")
@@ -457,7 +458,13 @@ func httpClientCheck(w http.ResponseWriter, r *http.Request) {
 		}
 		proxyError := make(map[string]string)
 		now := time.Now()
-		resp, err := ctxhttp.Get(ctx, http.DefaultClient, u.String())
+		req, err := http.NewRequest("GET", u.String(), nil)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("parse %s error %s", v, err), 400)
+			return
+		}
+		req.Close = true
+		resp, err := ctxhttp.Do(ctx, http.DefaultClient, req)
 		if err != nil {
 			proxyError["error"] = err.Error()
 			status = 502
@@ -474,7 +481,7 @@ func httpClientCheck(w http.ResponseWriter, r *http.Request) {
 		}
 		if status != 502 {
 			reqTime := time.Now().Sub(now)
-			if reqTime > 3 * time.Second {
+			if reqTime > 3*time.Second {
 				status = 502
 			}
 			proxyError["time"] = fmt.Sprint(reqTime)
