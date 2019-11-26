@@ -465,6 +465,8 @@ func httpClientCheck(w http.ResponseWriter, r *http.Request) {
 		}
 		req.Close = true
 		resp, err := ctxhttp.Do(ctx, http.DefaultClient, req)
+		reqTime := time.Now().Sub(now)
+		proxyError["response_time"] = fmt.Sprint(reqTime)
 		if err != nil {
 			proxyError["error"] = err.Error()
 			status = 502
@@ -480,11 +482,9 @@ func httpClientCheck(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if status != 502 {
-			reqTime := time.Now().Sub(now)
-			if reqTime > 3*time.Second {
+			if reqTime > 10 * time.Second {
 				status = 502
 			}
-			proxyError["time"] = fmt.Sprint(reqTime)
 		}
 		proxyData[host] = proxyError
 	}
