@@ -464,7 +464,11 @@ func httpClientCheck(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		req.Close = true
+		// retry
 		resp, err := ctxhttp.Do(ctx, http.DefaultClient, req)
+		if err != nil && strings.HasSuffix(err.Error(), "EOF") {
+			resp, err = ctxhttp.Do(ctx, http.DefaultClient, req)
+		}
 		reqTime := time.Now().Sub(now)
 		proxyError["response_time"] = fmt.Sprint(reqTime)
 		if err != nil {

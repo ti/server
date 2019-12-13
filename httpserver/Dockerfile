@@ -1,4 +1,4 @@
-FROM golang:1.13.4
+FROM golang:1.13.5
 
 ENV CGO_ENABLED=0
 ENV GOOS=linux
@@ -11,7 +11,7 @@ WORKDIR /go/src/github.com/ti/server/httpserver/client
 RUN go install -ldflags '-s -w'
 RUN go get github.com/ti/server/etcdrest
 
-FROM golang:1.13.4
+FROM golang:1.13.5
 RUN apt-get update
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get -y install traceroute \
@@ -90,6 +90,10 @@ RUN virtualenv --system-site-packages -p python3 ./venv
 
 # java
 RUN apt-get install -y default-jdk
+
+# nodejs
+RUN apt-get install -y nodejs
+RUN apt-get install -y npm
 
 # clean
 RUN apt-get autoclean
