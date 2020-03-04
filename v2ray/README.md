@@ -8,6 +8,7 @@ Docker Compose solution: v2ray + Caddy
 
 ```
 $ ./configure <Host> 
+$ cd ./build
 $ docker-compose up -d
 ```
 

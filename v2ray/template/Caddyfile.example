@@ -1,8 +1,12 @@
-[HOST]
-log / stdout "{combined} | {scheme}://{host} {>Connection} {>Upgrade}"
-proxy / https://nanxi.li
-browse /files /downloads
-proxy /v2ws v2ray:8008 {
-  websocket
-  header_upstream -Origin
+[HOST] {
+ proxy / https://nanxi.li
+ proxy /v2ws v2ray:8008 {
+   websocket
+   header_upstream -Origin
+ }
+}
+
+[HOST]/files {
+ root /Downloads/
+ browse
 }

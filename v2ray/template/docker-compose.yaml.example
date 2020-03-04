@@ -12,7 +12,7 @@ services:
       - ./public:/srv
       - ./Caddyfile:/etc/Caddyfile
       - caddyacme:/.caddy/acme
-      - downloads:/Downloads
+      - ~/Downloads:/Downloads
     restart: always
     depends_on:
       - v2ray
@@ -24,4 +24,3 @@ services:
     restart: always
 volumes:
   caddyacme:
-  downloads:~/Downloads
