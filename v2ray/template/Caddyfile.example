@@ -1,6 +1,7 @@
 [HOST]
 log / stdout "{combined} | {scheme}://{host} {>Connection} {>Upgrade}"
-redir / https://nanxi.li
+proxy / https://nanxi.li
+browse /files /downloads
 proxy /v2ws v2ray:8008 {
   websocket
   header_upstream -Origin
