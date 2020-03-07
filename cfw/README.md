@@ -7,7 +7,11 @@ Docker Compose solution: v2ray + Caddy
 ## Usage
 
 ```
-$ ./configure <Host> 
+$ wget https://github.com/ti/server/raw/master/cfw/cfw.tar.gz
+$ tar zxvf cfw.tar.gz 
+$ cd cfw
+$ sh configure <Host> 
+$ cd build
 $ docker stack deploy -c compose.yml cfw
 $ cat v2ray-client.json
 $ how to stop ? docker stack rm  cfw

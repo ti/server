@@ -2,7 +2,7 @@
 
 if [ -z "$1" ]; then
   echo
-  echo "Usage: ./configure <host> <UUID>, the <UUID> is optional"
+  echo "Usage: sh configure <host> <UUID>, the <UUID> is optional"
   echo
   exit 1
 fi
