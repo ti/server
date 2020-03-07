@@ -29,10 +29,12 @@ services:
       - source: v2ray
         target: /etc/v2ray/config.json
     deploy:
+      replicas: 1
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.v2ray.rule=Host(`[HOST]`)&&PathPrefix(`/v2ws`)"
-        - "traefik.http.services.v2ray.loadbalancer.server.port=8008"
+        - "traefik.http.routers.v2ray.rule=Host(`[HOST]`)&&PathPrefix(`/v2/h2`)"
+        - "traefik.http.services.v2ray.loadbalancer.server.port=8280"
+        - "traefik.http.services.v2ray.loadbalancer.server.scheme=h2c"
         - "traefik.http.routers.v2ray.entrypoints=websecure"
         - "traefik.http.routers.v2ray.tls.certresolver=certResolver"
 

@@ -34,7 +34,7 @@
   }],
   "transport": {
     "wsSettings": {
-      "path": "/v2ws"
+      "path": "/v2/h2"
     }
   },
   "routing": {

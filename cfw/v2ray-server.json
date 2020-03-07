@@ -1,26 +1,58 @@
 {
-  "log" : {
+  "log": {
     "loglevel": "info"
   },
-  "inbounds": [{
-    "port": 8008,
-    "listen": "0.0.0.0",
-    "protocol": "vmess",
-    "settings": {
-      "clients": [{
-        "id": "[UUID]",
-        "alterId": 4
-      }]
+  "inbounds": [
+    {
+      "port": 8080,
+      "protocol": "vmess",
+      "settings": {
+        "clients": [
+          {
+            "id": "[UUID]",
+            "alterId": 64
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "wsSettings": {
+          "path": "/v2/ws"
+        },
+        "sockopt": {
+          "tcpFastOpen": true
+        }
+      }
     },
-    "streamSettings": {
-      "network": "ws",
-      "wsSettings": {
-        "path": "/v2ws"
+    {
+      "port": 8280,
+      "protocol": "vmess",
+      "settings": {
+        "clients": [
+          {
+            "id": "[UUID]",
+            "alterId": 64
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "http",
+        "httpSettings": {
+          "host": [
+            "[HOST]"
+          ],
+          "path": "/v2/h2"
+        },
+        "sockopt": {
+          "tcpFastOpen": true
+        }
       }
     }
-  }],
-  "outbounds": [{
-    "protocol": "freedom",
-    "settings": {}
-  }]
+  ],
+  "outbounds": [
+    {
+      "protocol": "freedom",
+      "settings": {}
+    }
+  ]
 }

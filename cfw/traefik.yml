@@ -13,6 +13,11 @@ providers:
     swarmMode: true
     swarmModeRefreshSeconds: "30s"
 
+accessLog:
+  filePath: /data/log/access.log
+  bufferingSize: 1
+
+
 entryPoints:
   web:
     address: ":80"
@@ -42,6 +47,13 @@ http:
         - websecure
       tls:
         certResolver: certResolver
+    v2RayWs:
+      service: v2RayWs
+      rule: Host(`[HOST]`)&&PathPrefix(`/v2/ws`)
+      entrypoints:
+        - websecure
+      tls:
+        certResolver: certResolver
   services:
     # noop service, the URL will be never called
     noop:
@@ -53,6 +65,10 @@ http:
         servers:
           - url: https://nanxi.li
         passHostHeader: false
+    v2RayWs:
+      loadBalancer:
+        servers:
+          - url: http://v2ray:8080
   middlewares:
     https_redirect:
       redirectScheme:
