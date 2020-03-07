@@ -1,7 +1,7 @@
 
-# docker-v2ray-ws-tls
+# Docker v2ray with traefik
 
-Docker Compose solution: v2ray + Caddy
+Docker Compose solution: v2ray + traefik
 
 
 ## Usage
@@ -19,4 +19,10 @@ $ how to stop ? docker stack rm  cfw
 
 Then connect to `https://<Host>:443` via vmess over wss with `path: "/v2ws"` alterId is "4"
 
-## more info
+## Have trouble?
+
+# docker swarm init
+# /etc/docker/daemon.json
+# "live-restore": false,
+# /etc/ssh/sshd_config 
+# PasswordAuthentication yes
