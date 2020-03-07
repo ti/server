@@ -3,7 +3,8 @@
 *.dll
 *.so
 *.dylib
-
+.DS_Store
+cfw/build
 # Test binary, build with `go test -c`
 *.test
 

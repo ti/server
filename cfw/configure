@@ -1,0 +1,25 @@
+#!/usr/bin/env sh
+
+if [ -z "$1" ]; then
+  echo
+  echo "Usage: ./configure <host> <UUID>, the <UUID> is optional"
+  echo
+  exit 1
+fi
+
+uuid="$2"
+if [ -z "$uuid" ]; then
+  uuid=$(uuidgen)
+fi
+
+host=$1
+echo "Connection ID: " ${uuid}
+echo "Connection Host: " ${host}
+
+mkdir -p build
+for file in *.yml *.json;do
+    echo ${file} ./build/${file}
+    sed "s/\[UUID\]/${uuid}/g; s/\[HOST\]/${host}/g" ${file} > build/${file}
+done
+
+echo "in ./build run docker stack deploy -c compose.yml cfw"

@@ -1,0 +1,47 @@
+{
+  "inbounds": [{
+    "port": 1080,
+    "listen": "127.0.0.1",
+    "protocol": "socks",
+    "sniffing": {
+      "enabled": true,
+      "destOverride": ["http", "tls"]
+    },
+    "settings": {
+      "auth": "noauth",
+      "udp": false
+    },
+    "tag": "IN-[HOST]"
+  }],
+  "outbounds": [{
+    "protocol": "vmess",
+    "settings": {
+      "vnext": [{
+        "address": "[HOST]",
+        "port": 443,
+        "users": [{
+          "id": "[UUID]",
+          "alterId": 4,
+          "security": "auto"
+        }]
+      }]
+    },
+    "streamSettings": {
+      "network": "ws",
+      "security": "tls"
+    },
+    "tag": "OUT-[HOST]"
+  }],
+  "transport": {
+    "wsSettings": {
+      "path": "/v2ws"
+    }
+  },
+  "routing": {
+    "rules": [{
+      "type": "field",
+      "inboundTag": [ "IN-[HOST]" ],
+      "outboundTag": "OUT-[HOST]"
+    }]
+  }
+}

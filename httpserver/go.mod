@@ -1,5 +1,7 @@
 module github.com/ti/server/httpserver
 
+go 1.14
+
 require (
 	github.com/clbanning/mxj v1.8.3
 	github.com/elazarl/goproxy v0.0.0-20190911111923-ecfe977594f1

@@ -1,0 +1,64 @@
+version: '3.7'
+
+services:
+  traefik:
+    image: "traefik:v2.2"
+    configs:
+      - source: traefik
+        target: /etc/traefik/traefik.yml
+    volumes:
+      - acme-data:/data/
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    ports:
+      - "80:80"
+      - "443:443"
+    deploy:
+      replicas: 1
+      labels:
+        - "traefik.http.routers.traefik.rule=Host(`[HOST]`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
+        - "traefik.http.routers.traefik.service=api@internal"
+        - "traefik.http.routers.traefik.middlewares=auth"
+        - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+        - "traefik.http.routers.traefik.entrypoints=websecure"
+        - "traefik.http.routers.traefik.tls.certresolver=certResolver"
+        - "traefik.http.middlewares.auth.basicauth.users=admin:$$apr1$$V3vxJ0jn$$gopSBrA/er1HP4NTNw/9./" # echo $(htpasswd -nb admin cfw) | sed -e s/\\$/\\$\\$/g
+
+  v2ray:
+    image: v2ray/official
+    configs:
+      - source: v2ray
+        target: /etc/v2ray/config.json
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.v2ray.rule=Host(`[HOST]`)&&PathPrefix(`/v2ws`)"
+        - "traefik.http.services.v2ray.loadbalancer.server.port=8008"
+        - "traefik.http.routers.v2ray.entrypoints=websecure"
+        - "traefik.http.routers.v2ray.tls.certresolver=certResolver"
+
+  files:
+    image: patrickdappollonio/docker-http-server
+    volumes:
+      - ~/Downloads:/html
+    command:
+      - "--pathprefix=/files/"
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.files.rule=Host(`[HOST]`)&&PathPrefix(`/files/`)"
+        - "traefik.http.services.files.loadbalancer.server.port=5000"
+        - "traefik.http.routers.files.entrypoints=websecure"
+        - "traefik.http.routers.files.tls.certresolver=certResolver"
+
+configs:
+  traefik:
+    file: ./traefik.yml
+  v2ray:
+    file: ./v2ray-server.json
+
+volumes:
+  acme-data:
+
+networks:
+  default:
+    driver: overlay

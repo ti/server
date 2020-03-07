@@ -1,0 +1,60 @@
+log:
+  level: INFO
+  format: json
+
+api:
+  dashboard: true
+  insecure: true
+
+providers:
+  file:
+    filename: /etc/traefik/traefik.yml
+  docker:
+    swarmMode: true
+    swarmModeRefreshSeconds: "30s"
+
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+
+certificatesResolvers:
+  certResolver:
+    acme:
+      email: traefik@gmail.com
+      storage: /data/acme.json
+      tlschallenge: {}
+
+http:
+  routers:
+    http_catchall:
+      entryPoints:
+        - web
+      middlewares:
+        - https_redirect
+      rule: "HostRegexp(`{any:.+}`)"
+      service: noop
+    blogRouter:
+      service: blog
+      rule: Host(`[HOST]`)&&PathPrefix(`/`)
+      entrypoints:
+        - websecure
+      tls:
+        certResolver: certResolver
+  services:
+    # noop service, the URL will be never called
+    noop:
+      loadBalancer:
+        servers:
+          - url: http://127.0.0.1:8080
+    blog:
+      loadBalancer:
+        servers:
+          - url: https://nanxi.li
+        passHostHeader: false
+  middlewares:
+    https_redirect:
+      redirectScheme:
+        scheme: https
+        permanent: true
