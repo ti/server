@@ -1,47 +1,178 @@
 {
-  "inbounds": [{
-    "port": 1080,
-    "listen": "127.0.0.1",
-    "protocol": "socks",
-    "sniffing": {
-      "enabled": true,
-      "destOverride": ["http", "tls"]
+  "dns": {
+    "hosts": {
+      "domain:v2ray.com": "www.vicemc.net",
+      "domain:github.io": "pages.github.com",
+      "domain:wikipedia.org": "www.wikimedia.org",
+      "domain:shadowsocks.org": "electronicsrealm.com"
     },
-    "settings": {
-      "auth": "noauth",
-      "udp": false
+    "servers": [
+      "1.1.1.1",
+      {
+        "address": "114.114.114.114",
+        "port": 53,
+        "domains": [
+          "geosite:cn"
+        ]
+      },
+      "8.8.8.8",
+      "localhost"
+    ]
+  },
+  "inbounds": [
+    {
+      "listen": "0.0.0.0",
+      "port": 10808,
+      "protocol": "socks",
+      "settings": {
+        "auth": "noauth",
+        "udp": true,
+        "userLevel": 8
+      },
+      "sniffing": {
+        "destOverride": [
+          "http",
+          "tls"
+        ],
+        "enabled": false
+      },
+      "tag": "socks"
     },
-    "tag": "IN-[HOST]"
-  }],
-  "outbounds": [{
-    "protocol": "vmess",
-    "settings": {
-      "vnext": [{
-        "address": "[HOST]",
-        "port": 443,
-        "users": [{
-          "id": "[UUID]",
-          "alterId": 4,
-          "security": "auto"
-        }]
-      }]
+    {
+      "listen": "0.0.0.0",
+      "port": 10809,
+      "protocol": "http",
+      "settings": {
+        "userLevel": 8
+      },
+      "tag": "http"
+    }
+  ],
+  "log": {
+    "loglevel": "warning"
+  },
+  "outbounds": [
+    {
+      "mux": {
+        "enabled": true
+      },
+      "protocol": "vmess",
+      "settings": {
+        "vnext": [
+          {
+            "address": "[HOST]",
+            "port": 443,
+            "users": [
+              {
+                "alterId": 64,
+                "id": "[UUID]",
+                "security": "auto"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "httpsettings": {
+          "host": [
+            "[HOST]"
+          ],
+          "path": "/v2/h2"
+        },
+        "network": "h2",
+        "security": "tls",
+        "tlssettings": {
+          "allowInsecure": true,
+          "serverName": "[HOST]"
+        }
+      },
+      "tag": "proxy-h2"
     },
-    "streamSettings": {
-      "network": "ws",
-      "security": "tls"
+    {
+      "mux": {
+        "enabled": true
+      },
+      "protocol": "vmess",
+      "settings": {
+        "vnext": [
+          {
+            "address": "[HOST]",
+            "port": 443,
+            "users": [
+              {
+                "alterId": 64,
+                "id": "[UUID]",
+                "security": "auto"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "wsSettings": {
+          "path": "/v2/ws"
+        },
+        "network": "ws",
+        "security": "tls"
+      },
+      "tag": "proxy-ws"
     },
-    "tag": "OUT-[HOST]"
-  }],
-  "transport": {
-    "wsSettings": {
-      "path": "/v2/h2"
+    {
+      "protocol": "freedom",
+      "settings": {},
+      "tag": "direct"
+    },
+    {
+      "protocol": "blackhole",
+      "settings": {
+        "response": {
+          "type": "http"
+        }
+      },
+      "tag": "block"
+    }
+  ],
+  "policy": {
+    "levels": {
+      "8": {
+        "connIdle": 300,
+        "downlinkOnly": 1,
+        "handshake": 4,
+        "uplinkOnly": 1
+      }
+    },
+    "system": {
+      "statsInboundUplink": true,
+      "statsInboundDownlink": true
     }
   },
   "routing": {
-    "rules": [{
-      "type": "field",
-      "inboundTag": [ "IN-[HOST]" ],
-      "outboundTag": "OUT-[HOST]"
-    }]
+    "domainStrategy": "IPOnDemand",
+    "rules": [
+      {
+        "type": "field",
+        "outboundTag": "direct",
+        "domain": [
+          "geosite:cn"
+        ]
+      },
+      {
+        "type": "field",
+        "domain": [
+          "yahoo.com"
+        ],
+        "outboundTag": "proxy-ws"
+      },
+      {
+        "type": "field",
+        "network":"tcp",
+        "outboundTag":  "proxy-h2"
+      },
+      {
+        "type": "field",
+        "network":"udp",
+        "outboundTag":  "proxy-ws"
+      }
+    ]
   }
 }

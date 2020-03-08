@@ -14,10 +14,14 @@ $ sh configure <your.domain.com>
 $ cd build
 $ docker stack deploy -c compose.yml cfw
 $ cat v2ray-client.json
-$ how to stop ? docker stack rm  cfw
+$ how to stop ? docker stack rm cfw
 ```
 
-Then connect to `https://<Host>:443` via vmess over wss with `path: "/v2ws"` alterId is "4"
+```
+the v2ray client config is v2ray-client.json
+```
+
+Then connect to `wss://<Host>:443/v2/ws` or `https://<Host>:443/v2/h2` and  alterId is "64"
 
 ## Have trouble?
 
@@ -26,3 +30,13 @@ Then connect to `https://<Host>:443` via vmess over wss with `path: "/v2ws"` alt
 # "live-restore": false,
 # /etc/ssh/sshd_config 
 # PasswordAuthentication yes
+
+## How to connect in client
+
+```bash
+# copy build/v2ray-client.json to the local, the run the command
+docker run --restart always --name v2ray -d -v $(pwd)/v2ray-client.json:/etc/v2ray/config.json -p 127.0.0.1:10808:10808  -p 127.0.0.1:10809:10809 v2fly/v2fly-core:latest
+```
+
+> the client http proxy port is  127.0.0.1:1080
+> the client socket5 proxy port is 127.0.0.1:10809
