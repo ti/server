@@ -25,11 +25,17 @@ Then connect to `wss://<Host>:443/v2/ws` or `https://<Host>:443/v2/h2` and  alte
 
 ## Have trouble?
 
-# docker swarm init
-# /etc/docker/daemon.json
-# "live-restore": false,
-# /etc/ssh/sshd_config 
-# PasswordAuthentication yes
+docker swarm init
+
+```bash
+sed -i 's/\"live-restore\":.*/\"live-restore\": false,/g' /etc/docker/daemon.json
+```
+
+/etc/ssh/sshd_config
+
+```bash
+sed -i 's/PasswordAuthentication .*/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+```
 
 ## How to connect in client
 
