@@ -29,6 +29,7 @@ docker swarm init
 
 ```bash
 sed -i 's/\"live-restore\":.*/\"live-restore\": false,/g' /etc/docker/daemon.json
+systemctl restart docker
 ```
 
 /etc/ssh/sshd_config
