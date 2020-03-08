@@ -43,6 +43,8 @@ http:
     blogRouter:
       service: blog
       rule: Host(`[HOST]`)&&PathPrefix(`/`)
+      middlewares:
+        - blog_redirect
       entrypoints:
         - websecure
       tls:
@@ -73,4 +75,9 @@ http:
     https_redirect:
       redirectScheme:
         scheme: https
+        permanent: true
+    blog_redirect:
+      redirectRegex:
+        regex: ".+"
+        replacement: https://nanxi.li
         permanent: true
