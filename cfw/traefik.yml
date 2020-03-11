@@ -14,8 +14,7 @@ providers:
     swarmModeRefreshSeconds: "30s"
 
 accessLog:
-  filePath: /data/log/access.log
-  bufferingSize: 1
+  bufferingSize: 3
 
 
 entryPoints:
