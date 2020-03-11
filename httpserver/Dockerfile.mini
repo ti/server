@@ -1,0 +1,16 @@
+FROM golang:1.4
+
+ENV CGO_ENABLED=0
+ENV GOOS=linux
+ENV GO111MODULE=on
+
+COPY ./ /go/src/github.com/ti/server/httpserver
+WORKDIR /go/src/github.com/ti/server/httpserver
+RUN go install -ldflags '-s -w'
+WORKDIR /go/src/github.com/ti/server/httpserver/client
+RUN go install -ldflags '-s -w'
+RUN go get github.com/ti/server/etcdrest
+
+WORKDIR /app/
+CMD ["/go/bin/httpserver","-p", "8080", "-mode", "info"]
+EXPOSE 8080

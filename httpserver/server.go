@@ -140,8 +140,7 @@ func main() {
 	default:
 		http.Handle("/", fs)
 	}
-
-	handler := GRPCMixHandler(mux, gs)
+	handler := h2c.NewHandler(GRPCMixHandler(mux, gs), &http2.Server{})
 	if scheme == "https" {
 		panic(http.ServeTLS(listener, handler, *cert, *key))
 	} else {
