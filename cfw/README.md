@@ -45,5 +45,5 @@ sed -i 's/PasswordAuthentication .*/PasswordAuthentication yes/g' /etc/ssh/sshd_
 docker run --restart always --name v2ray -d -v $(pwd)/v2ray-client.json:/etc/v2ray/config.json -p 127.0.0.1:10808:10808  -p 127.0.0.1:10809:10809 v2fly/v2fly-core:latest
 ```
 
-> the client http proxy port is  127.0.0.1:1080
-> the client socket5 proxy port is 127.0.0.1:10809
+* the client socket5 proxy port is 127.0.0.1:10808
+* the client http proxy port is  127.0.0.1:10809
