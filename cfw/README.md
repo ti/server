@@ -50,6 +50,8 @@ systemctl restart docker
 
 ```bash
 sed -i 's/PasswordAuthentication .*/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+systemctl restart sshd
+# sudo adduser ${USER} sudo 
 ```
 
 ### install docker on ubuntu?
@@ -61,6 +63,6 @@ $ sudo apt-key fingerprint 0EBFCD88
 $ sudo add-apt-repository  "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
 $ sudo apt-get update
 $ sudo apt-get install docker-ce docker-ce-cli containerd.io
-$ sudo usermod -aG docker ${USER}
+$ sudo adduser ${USER} docker 
 $ su ${USER}
 ```
