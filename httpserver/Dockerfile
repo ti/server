@@ -62,9 +62,9 @@ RUN apt install -y mysql-server mysql-client
 RUN curl https://dl.google.com/go/go1.14.2.linux-amd64.tar.gz -o go.tar.gz
 RUN tar -C /usr/local -xzf go.tar.gz
 RUN /bin/rm go.tar.gz
-RUN mkdir /root/go
+RUN mkdir /go
 ENV PATH="/usr/local/go/bin:${PATH}"
-ENV GOPATH="/root/go"
+ENV GOPATH="/go"
 
 # v2ray
 RUN curl -Ls https://install.direct/go.sh | bash
@@ -85,8 +85,11 @@ RUN apt install -y default-jdk
 RUN apt install -y maven
 
 # nodejs
-RUN apt install -y nodejs
-RUN apt install -y npm
+RUN curl https://nodejs.org/dist/v12.16.3/node-v12.16.3-linux-x64.tar.xz -o node.tar.xz
+RUN tar -xJvf node.tar.xz
+RUN mv node-v12.16.3-linux-x64 /usr/local/nodejs
+ENV PATH="/usr/local/nodejs/bin:${PATH}"
+
 
 # kafka
 RUN curl https://downloads.apache.org/kafka/2.5.0/kafka_2.12-2.5.0.tgz -o kafka.tgz
@@ -99,14 +102,13 @@ ENV PATH="/usr/local/kafka/bin:${PATH}"
 RUN apt autoclean
 
 # tools
-ENV GO111MODULE on
 ENV GOPROXY=https://goproxy.io
 
 RUN go get github.com/ti/server/etcdrest
 RUN go get github.com/ti/server/httpserver
 RUN go get github.com/ti/server/httpserver/client
 RUN go clean --modcache
-RUN mv /root/go/bin /app/
+RUN mv /go/bin /app/
 RUN rm -rf /go/src/
 WORKDIR /app/
 CMD ["/app/httpserver", "-p", "8080", "-d", "www"]
