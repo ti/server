@@ -64,7 +64,7 @@ RUN tar -C /usr/local -xzf go.tar.gz
 RUN /bin/rm go.tar.gz
 RUN mkdir /root/go
 ENV PATH="/usr/local/go/bin:${PATH}"
-ENV GOPATH="/root/go:${PATH}"
+ENV GOPATH="/root/go"
 
 # v2ray
 RUN curl -Ls https://install.direct/go.sh | bash
@@ -106,8 +106,8 @@ RUN go get github.com/ti/server/etcdrest
 RUN go get github.com/ti/server/httpserver
 RUN go get github.com/ti/server/httpserver/client
 RUN go clean --modcache
-RUN mv /root/go/bin/ /app/
-RUN rm -rf /root/go/src/
+RUN mv /root/go/bin /app/
+RUN rm -rf /go/src/
 WORKDIR /app/
 CMD ["/app/httpserver", "-p", "8080", "-d", "www"]
 EXPOSE 8080
