@@ -52,7 +52,7 @@ RUN apt update
 RUN apt install -y postgresql-12 postgresql-client-12
 
 # mysql
-RUN curl https://repo.mysql.com//mysql-apt-config_0.8.13-1_all.deb -o mysql.deb
+RUN curl https://repo.mysql.com//mysql-apt-config_0.8.15-1_all.deb -o mysql.deb
 RUN dpkg -i mysql.deb
 RUN /bin/rm mysql.deb
 RUN apt update
