@@ -80,16 +80,11 @@ RUN pip3 --no-cache-dir install --upgrade setuptools
 RUN pip3 --no-cache-dir install --upgrade tensorflow
 RUN virtualenv --system-site-packages -p python3 ./venv
 
-# java
-RUN apt install -y default-jdk
-RUN apt install -y maven
-
 # nodejs
 RUN curl https://nodejs.org/dist/v12.16.3/node-v12.16.3-linux-x64.tar.xz -o node.tar.xz
 RUN tar -xJvf node.tar.xz
 RUN mv node-v12.16.3-linux-x64 /usr/local/nodejs
 ENV PATH="/usr/local/nodejs/bin:${PATH}"
-
 
 # kafka
 RUN curl https://downloads.apache.org/kafka/2.5.0/kafka_2.12-2.5.0.tgz -o kafka.tgz
@@ -97,6 +92,10 @@ RUN tar xzf kafka.tgz
 RUN mv kafka_2.12-2.5.0 /usr/local/kafka
 RUN /bin/rm kafka.tgz
 ENV PATH="/usr/local/kafka/bin:${PATH}"
+
+# java
+RUN apt install -y default-jdk
+RUN apt install -y maven
 
 # clean
 RUN apt autoclean
