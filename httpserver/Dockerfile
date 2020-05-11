@@ -110,6 +110,7 @@ RUN go get github.com/ti/server/httpserver/client
 RUN go clean --modcache
 RUN mv /go/bin /app/
 RUN rm -rf /go/src/
+RUN rm -rf /go/pkg/
 WORKDIR /app/
 CMD ["/app/httpserver", "-p", "8080", "-d", "www"]
 EXPOSE 8080
