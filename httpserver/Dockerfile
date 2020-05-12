@@ -62,8 +62,8 @@ RUN apt install -y mysql-server mysql-client
 RUN curl https://dl.google.com/go/go1.14.2.linux-amd64.tar.gz -o go.tar.gz
 RUN tar -C /usr/local -xzf go.tar.gz
 RUN /bin/rm go.tar.gz
-RUN mkdir /go
-ENV PATH="/usr/local/go/bin:${PATH}"
+RUN mkdir -p /go/bin
+ENV PATH="/go/bin:/usr/local/go/bin:${PATH}"
 ENV GOPATH="/go"
 
 # v2ray
