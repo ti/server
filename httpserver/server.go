@@ -15,6 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/ti/noframe/grpcmux"
 	pb "github.com/ti/server/httpserver/pb"
+	"github.com/ti/server/httpserver/tcpproxy"
 	"golang.org/x/net/context/ctxhttp"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -24,6 +25,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
+	"io"
 	"io/ioutil"
 	"math/rand"
 	"net"
@@ -125,10 +127,12 @@ func main() {
 	}
 	http.Handle("/_proxy/", StripPrefix("/_proxy", http.HandlerFunc(proxyHandler)))
 	http.Handle("/_info/", StripPrefix("/_info", http.HandlerFunc(httpInfo)))
+	http.Handle("/_upload/", StripPrefix("/_upload", http.HandlerFunc(upload)))
 	http.Handle("/_www/", StripPrefix("/_www", fs))
 	http.Handle("/_health/", StripPrefix("/_health", http.HandlerFunc(httpClientCheck)))
 	http.Handle("/_r/", StripPrefix("/_r", http.HandlerFunc(httpRedirect)))
 	http.Handle("/.well-known/", fs)
+	http.Handle("/_tcp/", StripPrefix("/_tcp", http.HandlerFunc(tcpProxyHandler)))
 
 	switch *mode {
 	case "file":
@@ -148,6 +152,28 @@ func main() {
 	}
 }
 
+// unsafe
+var proxys = map[string]*tcpproxy.Proxy{}
+
+func tcpProxyHandler(w http.ResponseWriter, r *http.Request) {
+	localAddr := r.URL.Query().Get("l")
+	remoteAddr := r.URL.Query().Get("r")
+	stop := r.URL.Query().Get("stop")
+	if stop != "" {
+		if c, ok := proxys[localAddr]; ok {
+			c.Stop()
+		}
+		return
+	}
+	proxy := tcpproxy.NewProxy(localAddr, remoteAddr)
+	err := proxy.Start()
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	proxys[localAddr] = proxy
+	w.Write([]byte(fmt.Sprintf("started for %s for %s", localAddr, remoteAddr)))
+}
 func proxyHandler(w http.ResponseWriter, r *http.Request) {
 	tokenName := "/token/"
 	var token string
@@ -424,7 +450,6 @@ func httpRedirect(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, uri.String(), 302)
 }
 
-
 func httpClientCheck(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	state := q.Get("state")
@@ -485,7 +510,7 @@ func httpClientCheck(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if status != 502 {
-			if reqTime > 10 * time.Second {
+			if reqTime > 10*time.Second {
 				status = 502
 			}
 		}
@@ -500,6 +525,54 @@ func httpClientCheck(w http.ResponseWriter, r *http.Request) {
 	}
 	buf, _ := json.Marshal(data)
 	w.Write(buf)
+}
+
+func upload(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseMultipartForm(500 << 20)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	baseDir := *dir
+	if !strings.HasSuffix(baseDir, "/") {
+		baseDir += "/"
+	}
+	if len(r.URL.Path) > 1 {
+		baseDir += r.URL.Path[1:]
+	} else {
+		baseDir += "upload/"
+	}
+	if !strings.HasSuffix(baseDir, "/") {
+		baseDir += "/"
+	}
+	os.MkdirAll(baseDir, os.ModePerm)
+	formdata := r.MultipartForm
+	files := formdata.File["file"]
+	for i, _ := range files { // loop through the files one by one
+		file, err := files[i].Open()
+		if err != nil {
+			http.Error(w, "open file error "+err.Error(), 400)
+			return
+		}
+		defer file.Close()
+		if err != nil {
+			fmt.Fprintln(w, err)
+			return
+		}
+		out, err := os.Create(baseDir + files[i].Filename)
+		defer out.Close()
+		if err != nil {
+			http.Error(w, "Unable to create the file for writing. Check your write access privilege", 400)
+			return
+		}
+		_, err = io.Copy(out, file)
+		if err != nil {
+			fmt.Fprintln(w, err)
+			return
+		}
+		fmt.Fprintf(w, "Files uploaded successfully : ")
+		fmt.Fprintf(w, files[i].Filename+"\n")
+	}
 }
 
 func httpInfo(w http.ResponseWriter, r *http.Request) {
