@@ -59,7 +59,7 @@ RUN apt update
 RUN apt install -y mysql-server mysql-client
 
 # go
-RUN curl https://dl.google.com/go/go1.14.2.linux-amd64.tar.gz -o go.tar.gz
+RUN curl https://dl.google.com/go/go1.15.linux-amd64.tar.gz -o go.tar.gz
 RUN tar -C /usr/local -xzf go.tar.gz
 RUN /bin/rm go.tar.gz
 RUN mkdir -p /go/bin
@@ -92,6 +92,7 @@ RUN tar xzf kafka.tgz
 RUN mv kafka_2.12-2.5.0 /usr/local/kafka
 RUN /bin/rm kafka.tgz
 ENV PATH="/usr/local/kafka/bin:${PATH}"
+
 
 # java
 RUN apt install -y default-jdk
