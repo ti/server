@@ -66,6 +66,18 @@ RUN mkdir -p /go/bin
 ENV PATH="/go/bin:/usr/local/go/bin:${PATH}"
 ENV GOPATH="/go"
 
+
+## kubenetes
+RUN curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl"
+RUN chmod +x ./kubectl
+RUN mv ./kubectl /usr/local/bin/kubectl
+
+## helm
+RUN curl https://get.helm.sh/helm-v3.3.0-linux-amd64.tar.gz -o helm.tar.gz
+RUN tar -xzf helm.tar.gz
+RUN mv linux-amd64/helm /usr/local/bin
+RUN /bin/rm helm.tar.gz
+
 # v2ray
 RUN curl -Ls https://install.direct/go.sh | bash
 
@@ -81,9 +93,9 @@ RUN pip3 --no-cache-dir install --upgrade tensorflow
 RUN virtualenv --system-site-packages -p python3 ./venv
 
 # nodejs
-RUN curl https://nodejs.org/dist/v12.16.3/node-v12.16.3-linux-x64.tar.xz -o node.tar.xz
+RUN curl https://nodejs.org/dist/v12.18.3/node-v12.18.3-linux-x64.tar.xz -o node.tar.xz
 RUN tar -xJvf node.tar.xz
-RUN mv node-v12.16.3-linux-x64 /usr/local/nodejs
+RUN mv node-v12.18.3-linux-x64 /usr/local/nodejs
 ENV PATH="/usr/local/nodejs/bin:${PATH}"
 
 # kafka
