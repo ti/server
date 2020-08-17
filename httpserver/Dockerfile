@@ -1,7 +1,4 @@
 FROM ubuntu:20.04
-ENV CGO_ENABLED=0
-ENV GOOS=linux
-ENV GO111MODULE=on
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get -yqq update && \
     apt install -y traceroute \
@@ -22,6 +19,7 @@ RUN apt-get -yqq update && \
     tcpdump \
     nmap \
     iperf \
+    gnupg \
     gnupg2 \
     net-tools \
     openssh-client \
@@ -36,44 +34,12 @@ RUN apt-get -yqq update && \
     libreadline-gplv2-dev libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev zlib1g-dev && \
     apt-get autoremove -y && \
     apt-get clean -y
-        
-RUN apt update
-RUN apt install -y traceroute \
-    python3-dev python3-pip \
-    software-properties-common \
-    autoconf build-essential libcurl4-gnutls-dev libxml2-dev libssl-dev automake libev-dev libtool libsodium-dev \
-    dnsutils \
-    apt-utils\
-    tree\
-    mtr-tiny \
-    iputils-ping \
-    netcat-openbsd \
-    wget \
-    telnet \
-    curl \
-    bash \
-    htop \
-    tcpdump \
-    nmap \
-    iperf \
-    gnupg2 \
-    net-tools \
-    openssh-client \
-    git \
-    vim \
-    curl \
-    wget \
-    redis-server \
-    jq \
-    apt-transport-https \
-    gnupg-agent \
-    libreadline-gplv2-dev libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev zlib1g-dev
 
 # mongo
-RUN curl https://www.mongodb.org/static/pgp/server-4.2.asc -o mongodb.asc
+RUN curl https://www.mongodb.org/static/pgp/server-4.4.asc -o mongodb.asc
 RUN /usr/bin/apt-key add mongodb.asc
 RUN /bin/rm mongodb.asc
-RUN /bin/echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.2 multiverse" | /usr/bin/tee /etc/apt/sources.list.d/mongodb-org-4.2.list
+RUN /bin/echo  "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" | /usr/bin/tee /etc/apt/sources.list.d/mongodb-org-4.4.list
 RUN apt update
 RUN apt install -y mongodb-org
 
@@ -100,6 +66,9 @@ RUN mkdir -p /go/bin
 ENV PATH="/go/bin:/usr/local/go/bin:${PATH}"
 ENV GOPATH="/go"
 
+ENV CGO_ENABLED=0
+ENV GOOS=linux
+ENV GO111MODULE=on
 
 ## kubenetes
 RUN curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl"
@@ -146,14 +115,20 @@ ENV PATH="/usr/local/kafka/bin:${PATH}"
 
 # ffmpeg
 RUN apt-get -yqq update && \
-    apt-get install -yq ffmpeg && \
-    apt-get autoremove -y && \
-    apt-get clean -y
+    apt-get install -yq ffmpeg
+
+## docker
+RUN curl https://download.docker.com/linux/ubuntu/gpg -o docker
+RUN /usr/bin/apt-key add docker
+RUN /bin/rm docker
+RUN add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+RUN apt update
+RUN apt install -y docker-ce docker-ce-cli containerd.io
 
 # clean
 RUN apt-get autoremove -y && \
     apt-get clean -y
-    
+
 # tools
 ENV GOPROXY=https://goproxy.io
 
