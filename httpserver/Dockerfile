@@ -140,5 +140,6 @@ RUN mv /go/bin /app/
 RUN rm -rf /go/src/
 RUN rm -rf /go/pkg/
 WORKDIR /app/
+RUN mkdir -p /app/www
 CMD ["/app/httpserver", "-p", "8080", "-d", "www"]
 EXPOSE 8080
