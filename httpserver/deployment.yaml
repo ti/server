@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-deployment
+  labels:
+    app: test
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: test
+  template:
+    metadata:
+      labels:
+        app: test
+    spec:
+      containers:
+        - name: test
+          image: nanxi/server:v1.8.0
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DOCKER_HOST
+              value: tcp://localhost:2375
+          command:
+            - /app/httpserver
+          args: ["-p", "8080", "-d", "www"]
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+        - name: dind
+          image: docker:stable-dind
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DOCKER_TLS_CERTDIR
+              value: ""
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: docker-graph-store
+              mountPath: /var/lib/docker
+      volumes:
+        - name: docker-graph-store
+          emptyDir: {}
