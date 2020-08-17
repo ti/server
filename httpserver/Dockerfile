@@ -3,7 +3,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get -yqq update && \
     apt install -y traceroute \
     python3-dev python3-pip \
-    software-properties-common \
+    software-properties-common openssh-server \
     autoconf build-essential libcurl4-gnutls-dev libxml2-dev libssl-dev automake libev-dev libtool libsodium-dev \
     dnsutils \
     apt-utils\
@@ -120,6 +120,15 @@ RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
 RUN add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
 RUN apt update
 RUN apt install -y docker-ce docker-ce-cli containerd.io
+
+## openssh
+RUN mkdir /var/run/sshd
+RUN echo 'root:o3sNqceaCaMFE1' | chpasswd
+RUN sed -i 's/#*PermitRootLogin prohibit-password/PermitRootLogin yes/g' /etc/ssh/sshd_config
+# SSH login fix. Otherwise user is kicked off after login
+RUN sed -i 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' /etc/pam.d/sshd
+RUN sed -i 's/PasswordAuthentication .*/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+RUN sed -i 's/#Port .*/Port 2022/g' /etc/ssh/sshd_config
 
 # clean
 RUN apt-get autoremove -y && \
