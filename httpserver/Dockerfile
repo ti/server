@@ -78,7 +78,9 @@ RUN mv linux-amd64/helm /usr/local/bin
 RUN /bin/rm helm.tar.gz
 
 # v2ray
-RUN curl -Ls https://install.direct/go.sh | bash
+RUN curl -O https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install-release.sh
+RUN bash install-release.sh
+RUN rm install-release.sh
 
 # shadowsocks
 RUN apt install -y shadowsocks-libev
