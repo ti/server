@@ -36,17 +36,13 @@ RUN apt-get -yqq update && \
     apt-get clean -y
 
 # mongo
-RUN curl https://www.mongodb.org/static/pgp/server-4.4.asc -o mongodb.asc
-RUN /usr/bin/apt-key add mongodb.asc
-RUN /bin/rm mongodb.asc
-RUN /bin/echo  "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" | /usr/bin/tee /etc/apt/sources.list.d/mongodb-org-4.4.list
+RUN curl -fsSL https://www.mongodb.org/static/pgp/server-4.2.asc | apt-key add -
+RUN /bin/echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.2 multiverse" | /usr/bin/tee /etc/apt/sources.list.d/mongodb-org-4.2.list
 RUN apt update
 RUN apt install -y mongodb-org
 
 # postgres
-RUN curl https://www.postgresql.org/media/keys/ACCC4CF8.asc -o pg.asc
-RUN /usr/bin/apt-key add pg.asc
-RUN /bin/rm pg.asc
+RUN curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
 RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" | tee  /etc/apt/sources.list.d/pgdg.list
 RUN apt update
 RUN apt install -y postgresql-12 postgresql-client-12
@@ -118,9 +114,7 @@ RUN apt-get -yqq update && \
     apt-get install -yq ffmpeg
 
 ## docker
-RUN curl https://download.docker.com/linux/ubuntu/gpg -o docker
-RUN /usr/bin/apt-key add docker
-RUN /bin/rm docker
+RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
 RUN add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
 RUN apt update
 RUN apt install -y docker-ce docker-ce-cli containerd.io
