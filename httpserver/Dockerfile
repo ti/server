@@ -3,6 +3,40 @@ ENV CGO_ENABLED=0
 ENV GOOS=linux
 ENV GO111MODULE=on
 ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get -yqq update && \
+    apt install -y traceroute \
+    python3-dev python3-pip \
+    software-properties-common \
+    autoconf build-essential libcurl4-gnutls-dev libxml2-dev libssl-dev automake libev-dev libtool libsodium-dev \
+    dnsutils \
+    apt-utils\
+    tree\
+    mtr-tiny \
+    iputils-ping \
+    netcat-openbsd \
+    wget \
+    telnet \
+    curl \
+    bash \
+    htop \
+    tcpdump \
+    nmap \
+    iperf \
+    gnupg2 \
+    net-tools \
+    openssh-client \
+    git \
+    vim \
+    curl \
+    wget \
+    redis-server \
+    jq \
+    apt-transport-https \
+    gnupg-agent \
+    libreadline-gplv2-dev libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev zlib1g-dev && \
+    apt-get autoremove -y && \
+    apt-get clean -y
+        
 RUN apt update
 RUN apt install -y traceroute \
     python3-dev python3-pip \
@@ -98,6 +132,10 @@ RUN tar -xJvf node.tar.xz
 RUN mv node-v12.18.3-linux-x64 /usr/local/nodejs
 ENV PATH="/usr/local/nodejs/bin:${PATH}"
 
+# java
+RUN apt install -y default-jdk
+RUN apt install -y maven
+
 # kafka
 RUN curl https://downloads.apache.org/kafka/2.5.0/kafka_2.12-2.5.0.tgz -o kafka.tgz
 RUN tar xzf kafka.tgz
@@ -106,13 +144,16 @@ RUN /bin/rm kafka.tgz
 ENV PATH="/usr/local/kafka/bin:${PATH}"
 
 
-# java
-RUN apt install -y default-jdk
-RUN apt install -y maven
+# ffmpeg
+RUN apt-get -yqq update && \
+    apt-get install -yq ffmpeg && \
+    apt-get autoremove -y && \
+    apt-get clean -y
 
 # clean
-RUN apt autoclean
-
+RUN apt-get autoremove -y && \
+    apt-get clean -y
+    
 # tools
 ENV GOPROXY=https://goproxy.io
 
