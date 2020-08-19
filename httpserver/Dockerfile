@@ -35,12 +35,6 @@ RUN apt-get -yqq update && \
     apt-get autoremove -y && \
     apt-get clean -y
 
-# mongo
-RUN curl -fsSL https://www.mongodb.org/static/pgp/server-4.2.asc | apt-key add -
-RUN /bin/echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.2 multiverse" | /usr/bin/tee /etc/apt/sources.list.d/mongodb-org-4.2.list
-RUN apt update
-RUN apt install -y mongodb-org
-
 # postgres
 RUN curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
 RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" | tee  /etc/apt/sources.list.d/pgdg.list
@@ -48,9 +42,6 @@ RUN apt update
 RUN apt install -y postgresql-12 postgresql-client-12
 
 # mysql
-RUN curl https://repo.mysql.com//mysql-apt-config_0.8.15-1_all.deb -o mysql.deb
-RUN dpkg -i mysql.deb
-RUN /bin/rm mysql.deb
 RUN apt update
 RUN apt install -y mysql-server mysql-client
 
@@ -97,7 +88,7 @@ RUN virtualenv --system-site-packages -p python3 ./venv
 RUN curl https://nodejs.org/dist/v12.18.3/node-v12.18.3-linux-x64.tar.xz -o node.tar.xz
 RUN tar -xJvf node.tar.xz
 RUN mv node-v12.18.3-linux-x64 /usr/local/nodejs
-ENV PATH="/usr/local/nodejs/bin:${PATH}"
+ENV PATH="${PATH}:/usr/local/nodejs/bin"
 
 # java
 RUN apt install -y default-jdk
@@ -107,8 +98,8 @@ RUN apt install -y maven
 RUN curl https://downloads.apache.org/kafka/2.5.0/kafka_2.12-2.5.0.tgz -o kafka.tgz
 RUN tar xzf kafka.tgz
 RUN mv kafka_2.12-2.5.0 /usr/local/kafka
-RUN /bin/rm kafka.tgz
-ENV PATH="/usr/local/kafka/bin:${PATH}"
+RUN /bin/rm -rf kafka*
+ENV PATH="${PATH}:/usr/local/kafka/bin"
 
 
 # ffmpeg
@@ -129,6 +120,17 @@ RUN sed -i 's/#*PermitRootLogin prohibit-password/PermitRootLogin yes/g' /etc/ss
 RUN sed -i 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' /etc/pam.d/sshd
 RUN sed -i 's/PasswordAuthentication .*/PasswordAuthentication yes/g' /etc/ssh/sshd_config
 RUN sed -i 's/#Port .*/Port 2022/g' /etc/ssh/sshd_config
+
+# mongodb
+RUN curl https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2004-x86_64-100.1.1.tgz -o mongodb-database-tools.tgz
+RUN curl https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-ubuntu2004-4.4.0.tgz -o mongodb.tgz
+RUN tar xzf mongodb-database-tools.tgz
+RUN tar xzf mongodb.tgz
+RUN mkdir -p /usr/local/mongodb/bin/
+RUN mv mongodb-database-tools-ubuntu2004-x86_64-100.1.1/bin/* /usr/local/mongodb/bin/
+RUN mv mongodb-linux-x86_64-ubuntu2004-4.4.0/bin/* /usr/local/mongodb/bin/
+RUN /bin/rm -rf mongodb*
+ENV PATH="${PATH}:/usr/local/mongodb/bin"
 
 # clean
 RUN apt-get autoremove -y && \
