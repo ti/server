@@ -14,7 +14,7 @@ RUN apt-get -yqq update && \
     wget \
     telnet \
     curl \
-    bash \
+    zsh powerline fonts-powerline \
     htop \
     tcpdump \
     nmap \
@@ -132,9 +132,20 @@ RUN mv mongodb-linux-x86_64-ubuntu2004-4.4.0/bin/* /usr/local/mongodb/bin/
 RUN /bin/rm -rf mongodb*
 ENV PATH="${PATH}:/usr/local/mongodb/bin"
 
+# pytorch
+
+RUN pip3 --no-cache-dir install torch torchvision
+
 # clean
 RUN apt-get autoremove -y && \
     apt-get clean -y
+
+# Pulsar
+RUN curl https://archive.apache.org/dist/pulsar/pulsar-2.6.0/apache-pulsar-2.6.0-bin.tar.gz -o apache-pulsar.tar.gz
+RUN tar xzf apache-pulsar.tar.gz
+RUN mv apache-pulsar-2.6.0 /usr/local/pulsar
+RUN /bin/rm -rf pulsar*
+ENV PATH="${PATH}:/usr/local/kafka/bin"
 
 # tools
 ENV GOPROXY=https://goproxy.io
