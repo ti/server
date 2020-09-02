@@ -6,8 +6,8 @@ RUN apt-get -yqq update && \
     software-properties-common openssh-server \
     autoconf build-essential libcurl4-gnutls-dev libxml2-dev libssl-dev automake libev-dev libtool libsodium-dev \
     dnsutils \
-    apt-utils\
-    tree\
+    apt-utils \
+    tree nfs-common \
     mtr-tiny \
     iputils-ping \
     netcat-openbsd \
