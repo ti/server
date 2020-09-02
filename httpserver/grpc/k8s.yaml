@@ -1,0 +1,174 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: greeter
+  namespace: cms
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: greeter
+  template:
+    metadata:
+      labels:
+        app: greeter
+    spec:
+      containers:
+        - args:
+            - --address=:8080
+          image: nanxi/grpc-greeter-go-server
+          imagePullPolicy: Always
+          livenessProbe:
+            exec:
+              command:
+                - /bin/grpc_health_probe
+                - -addr=:8080
+            initialDelaySeconds: 2
+          name: greeter
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            exec:
+              command:
+                - /bin/grpc_health_probe
+                - -addr=:8080
+            initialDelaySeconds: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: greeter
+  namespace: cms
+spec:
+  ports:
+    - name: grpc
+      port: 8080
+      protocol: TCP
+  selector:
+    app: greeter
+  type: ClusterIP
+  clusterIP: None # headless service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: envoy
+  namespace: cms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: envoy
+  template:
+    metadata:
+      labels:
+        app: envoy
+    spec:
+      containers:
+      - name: envoy
+        image: envoyproxy/envoy-alpine:v1.9.1
+        ports:
+        - name: https
+          containerPort: 443
+        - name: http
+          containerPort: 80
+        volumeMounts:
+        - name: config
+          mountPath: /etc/envoy
+        readinessProbe:
+          httpGet:
+            scheme: HTTP
+            path: /healthz
+            httpHeaders:
+            - name: x-envoy-livenessprobe
+              value: healthz
+            port: 80
+          initialDelaySeconds: 3
+        livenessProbe:
+          httpGet:
+            scheme: HTTP
+            path: /healthz
+            httpHeaders:
+            - name: x-envoy-livenessprobe
+              value: healthz
+            port: 80
+          initialDelaySeconds: 10
+      volumes:
+      - name: config
+        configMap:
+          name: envoy-conf
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-conf
+  namespace: cms
+data:
+  envoy.yaml: |
+    static_resources:
+      listeners:
+        - address:
+            socket_address:
+              address: 0.0.0.0
+              port_value: 80
+          filter_chains:
+            - filters:
+                - name: envoy.http_connection_manager
+                  config:
+                    access_log:
+                      - name: envoy.file_access_log
+                        config:
+                          path: "/dev/stdout"
+                    codec_type: AUTO
+                    stat_prefix: ingress_http
+                    route_config:
+                      name: local_route
+                      virtual_hosts:
+                        - name: http
+                          domains:
+                            - "*"
+                          routes:
+                            - match:
+                                prefix: "/"
+                              route:
+                                cluster: greeter
+                    http_filters:
+                      - name: envoy.health_check
+                        config:
+                          pass_through_mode: false
+                          headers:
+                            - name: ":path"
+                              exact_match: "/healthz"
+                            - name: "x-envoy-livenessprobe"
+                              exact_match: "healthz"
+                      - name: envoy.router
+                        config: {}
+      clusters:
+        - name: greeter
+          connect_timeout: 0.5s
+          type: STRICT_DNS
+          dns_lookup_family: V4_ONLY
+          lb_policy: ROUND_ROBIN
+          http2_protocol_options: {}
+          load_assignment:
+            cluster_name: greeter
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: greeter.cms.svc.cluster.local
+                          port_value: 8080
+          health_checks:
+            timeout: 1s
+            interval: 10s
+            unhealthy_threshold: 2
+            healthy_threshold: 2
+            grpc_health_check: {}
+    admin:
+      access_log_path: "/dev/stdout"
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 8080
+---
