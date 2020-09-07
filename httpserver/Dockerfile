@@ -150,6 +150,7 @@ ENV PATH="${PATH}:/usr/local/pulsar/bin"
 # tools
 ENV GOPROXY=https://goproxy.io
 RUN rm -rf /tmp/*
+RUN echo -e 'export PATH=${PATH}:/go/bin:/usr/local/go/bin:/usr/local/nodejs/bin:/usr/local/kafka/bin:/usr/local/mongodb/bin:/usr/local/pulsar/bin\nexport GOPROXY=https://goproxy.io' >> /root/.zshrc
 
 RUN go get github.com/ti/server/etcdrest
 RUN go get github.com/ti/server/httpserver
