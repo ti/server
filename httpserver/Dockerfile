@@ -145,7 +145,7 @@ RUN curl https://archive.apache.org/dist/pulsar/pulsar-2.6.0/apache-pulsar-2.6.0
 RUN tar xzf apache-pulsar.tar.gz
 RUN mv apache-pulsar-2.6.0 /usr/local/pulsar
 RUN /bin/rm -rf pulsar*
-ENV PATH="${PATH}:/usr/local/kafka/bin"
+ENV PATH="${PATH}:/usr/local/pulsar/bin"
 
 # tools
 ENV GOPROXY=https://goproxy.io
