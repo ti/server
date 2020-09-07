@@ -149,9 +149,6 @@ ENV PATH="${PATH}:/usr/local/pulsar/bin"
 
 # tools
 ENV GOPROXY=https://goproxy.io
-RUN rm -rf /tmp/*
-RUN echo -e 'export PATH=${PATH}:/go/bin:/usr/local/go/bin:/usr/local/nodejs/bin:/usr/local/kafka/bin:/usr/local/mongodb/bin:/usr/local/pulsar/bin\nexport GOPROXY=https://goproxy.io' >> /root/.zshrc
-
 RUN go get github.com/ti/server/etcdrest
 RUN go get github.com/ti/server/httpserver
 RUN go get github.com/ti/server/httpserver/client
@@ -159,6 +156,21 @@ RUN go clean --modcache
 RUN mv /go/bin /app/
 RUN rm -rf /go/src/
 RUN rm -rf /go/pkg/
+
+# zsh
+RUN chsh -s /usr/bin/zsh
+RUN echo 'alias ls="ls --color=auto"\nexport PATH=${PATH}:/go/bin:/usr/local/go/bin:/usr/local/nodejs/bin:/usr/local/kafka/bin:/usr/local/mongodb/bin:/usr/local/pulsar/bin\nexport GOPROXY=https://goproxy.io' >> /root/.zshrc
+RUN apt -y --purge --allow-remove-essential remove bash
+RUN ln -s /usr/bin/zsh  /usr/bin/bash
+RUN rm -f /root/.bashrc
+RUN rm -f /root/.zcompdump
+RUN rm -rf /tmp/*
+RUN rm -rf /root/.cache
+
+# clean
+RUN apt-get autoremove -y && \
+    apt-get clean -y
+
 WORKDIR /app/
 RUN mkdir -p /app/www
 CMD ["/app/httpserver", "-p", "8080", "-d", "www", "-l", "true"]
