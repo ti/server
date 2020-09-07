@@ -50,7 +50,7 @@ RUN curl https://dl.google.com/go/go1.15.linux-amd64.tar.gz -o go.tar.gz
 RUN tar -C /usr/local -xzf go.tar.gz
 RUN /bin/rm go.tar.gz
 RUN mkdir -p /go/bin
-ENV PATH="/go/bin:/usr/local/go/bin:${PATH}"
+ENV PATH="${PATH}:/go/bin:/usr/local/go/bin"
 ENV GOPATH="/go"
 
 ENV CGO_ENABLED=0
@@ -149,6 +149,7 @@ ENV PATH="${PATH}:/usr/local/kafka/bin"
 
 # tools
 ENV GOPROXY=https://goproxy.io
+RUN rm -rf /tmp/*
 
 RUN go get github.com/ti/server/etcdrest
 RUN go get github.com/ti/server/httpserver
