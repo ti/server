@@ -42,7 +42,7 @@ var (
 	port          = flag.Int("p", 8080, "port to listen")
 	logBody       = flag.Bool("l", false, "write http body log on std out")
 	cors          = flag.Bool("cors", true, "enable cors?")
-	decodeBody    = flag.Bool("b", true, "decode as struct")
+	decodeBody    = flag.Bool("b", false, "decode as struct")
 	dir           = flag.String("d", "./", "dir to server")
 	spa           = flag.Bool("spa", true, "is is a single page app?")
 	host          = flag.String("host", "", "ssl cert")
