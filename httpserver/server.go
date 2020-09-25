@@ -12,8 +12,8 @@ import (
 	"github.com/elazarl/goproxy"
 	"github.com/elazarl/goproxy/ext/auth"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
-	"github.com/sirupsen/logrus"
 	"github.com/ti/noframe/grpcmux"
+	log "github.com/sirupsen/logrus"
 	pb "github.com/ti/server/httpserver/pb"
 	"github.com/ti/server/httpserver/tcpproxy"
 	"golang.org/x/net/context/ctxhttp"
@@ -133,6 +133,8 @@ func main() {
 	http.Handle("/_r/", StripPrefix("/_r", http.HandlerFunc(httpRedirect)))
 	http.Handle("/.well-known/", fs)
 	http.Handle("/_tcp/", StripPrefix("/_tcp", http.HandlerFunc(tcpProxyHandler)))
+	http.Handle("/_callback/", http.StripPrefix("/_callback", http.HandlerFunc(callback)))
+	http.Handle("/_call/", http.StripPrefix("/_call", http.HandlerFunc(call)))
 
 	switch *mode {
 	case "file":
@@ -150,6 +152,108 @@ func main() {
 	} else {
 		panic(http.Serve(listener, handler))
 	}
+}
+
+
+func callback(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.Error(w, "not found", 405)
+		return
+	}
+	var callbackData Callback
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&callbackData); err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	if !(callbackData.Wait > 0 && !callbackData.Break && callbackData.CallbackURL != "") {
+		callbackData = Callback{
+			CallbackURL:  "http://127.0.0.1:8083/_call",
+			CallbackBody: `{"body":"test"}`,
+			Wait:         10,
+			Break:        false,
+			Error:        false,
+		}
+		b, _ := json.MarshalIndent(callbackData, "", "\t")
+		w.Write(b)
+		return
+	}
+	log.WithFields(log.Fields{
+		"remote_addr":  r.RemoteAddr,
+		"wait":         callbackData.Wait,
+		"callback_url": callbackData.CallbackURL,
+		"break":        callbackData.Break,
+		"Error":        callbackData.Error,
+	}).Info("start")
+	waitCallback(time.Duration(callbackData.Wait)*time.Second, callbackData.CallbackURL, callbackData.CallbackBody)
+	w.Write([]byte("receviced"))
+}
+
+func waitCallback(wait time.Duration, callbackURL, callbackBody string) {
+	go func() {
+		time.Sleep(wait)
+		resp, err := http.Post(callbackURL, "application/json", bytes.NewReader([]byte(callbackBody)))
+		if err != nil {
+			log.WithFields(log.Fields{
+				"callbackURL": callbackURL,
+			}).Error(err)
+			return
+		}
+		b, _ := ioutil.ReadAll(resp.Body)
+		log.WithFields(log.Fields{
+			"callbackURL": callbackURL,
+		}).Info(string(b))
+	}()
+}
+
+
+type Callback struct {
+	CallbackURL  string `json:"callback_url"`
+	CallbackBody string `json:"callback_body"`
+	Wait         int    `json:"wait"`
+	// 不回调
+	Break bool `json:"break"`
+	// 回调错误（回调Body中包含 Error）
+	Error bool `json:"error"`
+}
+
+func call(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "POST" {
+		b, _ := ioutil.ReadAll(r.Body)
+		log.Info(string(b))
+		return
+	}
+	q := r.URL.Query()
+	wait, _ := strconv.Atoi(q.Get("wait"))
+	status, _ := strconv.Atoi(q.Get("status"))
+	doPanic := q.Get("panic") != ""
+	ent := log.WithFields(log.Fields{
+		"wait":        wait,
+		"remote_addr": r.RemoteAddr,
+		"status":      status,
+		"panic":       doPanic,
+	})
+	ent.Info("start")
+	defer func() {
+		ent.Info("end")
+	}()
+	if status >= 400 && status < 600 {
+		w.WriteHeader(status)
+	}
+	if wait > 0 {
+		if wait > 300 {
+			wait = 60
+		}
+		for i := 0; i < wait; i++ {
+			time.Sleep(time.Second)
+			w.Write([]byte("."))
+		}
+		w.Write([]byte("\n"))
+	}
+	if doPanic {
+		ent.Panic("panic")
+	}
+	w.Write([]byte("finish"))
 }
 
 // unsafe
@@ -218,7 +322,7 @@ func proxyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	proxyURL := r.URL.Scheme + ":/" + r.URL.Path
-	logrus.WithFields(logrus.Fields{"type": "proxy"}).Info(proxyURL)
+	log.WithFields(log.Fields{"type": "proxy"}).Info(proxyURL)
 	endIndex := strings.Index(r.URL.Path[1:], "/") + 1
 	if endIndex < 1 {
 		endIndex = len(r.URL.Path)
@@ -658,7 +762,7 @@ func grpcInfo(ctx context.Context, in *pb.Request) (*pb.Response, error) {
 	}
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		logrus.Infof("failed to extract ServerMetadata from context")
+		log.Infof("failed to extract ServerMetadata from context")
 		return nil, status.New(codes.InvalidArgument, fmt.Sprintf("message %s", in.Type)).Err()
 	}
 	if ok {
@@ -677,7 +781,7 @@ func log(reqType string, req interface{}) {
 		return
 	}
 	data, _ := json.Marshal(req)
-	logrus.WithField("type", reqType).Info(string(data))
+	log.WithField("type", reqType).Info(string(data))
 }
 
 var strToCode = map[string]codes.Code{
