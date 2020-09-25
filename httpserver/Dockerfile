@@ -46,7 +46,7 @@ RUN apt update
 RUN apt install -y mysql-server mysql-client
 
 # go
-RUN curl https://dl.google.com/go/go1.15.linux-amd64.tar.gz -o go.tar.gz
+RUN curl https://dl.google.com/go/go1.15.2.linux-amd64.tar.gz -o go.tar.gz
 RUN tar -C /usr/local -xzf go.tar.gz
 RUN /bin/rm go.tar.gz
 RUN mkdir -p /go/bin
