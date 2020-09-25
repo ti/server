@@ -717,7 +717,7 @@ func GRPCMixHandler(h http.Handler, grpc *grpc.Server) http.Handler {
 			enableCors(w, r)
 		}
 		req := getRequestInfo(r)
-		log("grpc_mix", req)
+		logReq("grpc_mix", req)
 		ctx := context.WithValue(r.Context(), requestKey{}, req)
 		if r.ProtoMajor == 2 && strings.HasPrefix(r.Header.Get("Content-Type"), "application/grpc") {
 			grpc.ServeHTTP(w, r.WithContext(ctx))
@@ -746,7 +746,7 @@ func grpcInfo(ctx context.Context, in *pb.Request) (*pb.Response, error) {
 		Data:    make(map[string]*pb.Response_List),
 	}
 	defer func() {
-		log("grpc", resp)
+		logReq("grpc", resp)
 	}()
 	req, ok := ctx.Value(requestKey{}).(*request)
 	if ok {
@@ -776,7 +776,7 @@ func grpcInfo(ctx context.Context, in *pb.Request) (*pb.Response, error) {
 	return resp, nil
 }
 
-func log(reqType string, req interface{}) {
+func logReq(reqType string, req interface{}) {
 	if !*logBody {
 		return
 	}
