@@ -39,7 +39,7 @@ RUN apt-get -yqq update && \
 RUN curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
 RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" | tee  /etc/apt/sources.list.d/pgdg.list
 RUN apt update
-RUN apt install -y postgresql-12 postgresql-client-12
+RUN apt install -y postgresql-13 postgresql-client-13
 
 # mysql
 RUN apt update
