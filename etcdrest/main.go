@@ -3,11 +3,12 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"go.etcd.io/etcd/clientv3"
-	"go.etcd.io/etcd/pkg/transport"
+	"go.etcd.io/etcd/pkg/tlsutil"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -169,22 +170,35 @@ func newEtcdClient(etcdUri *url.URL) (*clientv3.Client, error) {
 		etcdConfig.Password, _ = etcdUri.User.Password()
 	}
 	etcdUriQuery := etcdUri.Query()
-	cert := etcdUriQuery.Get("cert")
-	if cert != "" {
-		key := etcdUriQuery.Get("key")
-		ca := etcdUriQuery.Get("ca")
-		// Load client cert
-		tlsInfo := transport.TLSInfo{
-			CertFile:      cert,
-			KeyFile:       key,
-			TrustedCAFile: ca,
-		}
-		tlsConfig, err := tlsInfo.ClientConfig()
+	certFile := etcdUriQuery.Get("cert")
+	if certFile != "" {
+		keyFile := etcdUriQuery.Get("key")
+		trustedCAFile := etcdUriQuery.Get("ca")
+		tlsConfig, err := newTlsConfig(certFile, keyFile, trustedCAFile)
 		if err != nil {
 			return nil, err
 		}
-		// Add TLS config
 		etcdConfig.TLS = tlsConfig
 	}
 	return clientv3.New(etcdConfig)
+}
+
+func newTlsConfig(certFile, keyFile, trustedCAFile string) (c *tls.Config, err error) {
+	cert, err := tlsutil.NewCert(certFile, keyFile, nil)
+	if err != nil {
+		return nil, err
+	}
+	cp, err := tlsutil.NewCertPool([]string{trustedCAFile})
+	if err != nil {
+		return nil, err
+	}
+	tlscfg := &tls.Config{
+		MinVersion:         tls.VersionTLS12,
+		InsecureSkipVerify: false,
+		RootCAs:            cp,
+	}
+	if cert != nil {
+		tlscfg.Certificates = []tls.Certificate{*cert}
+	}
+	return tlscfg, nil
 }

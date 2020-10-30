@@ -2,8 +2,9 @@
   "swagger": "2.0",
   "info": {
     "title": "info-service",
-    "description": "a service to print http or grpc request ",
-    "version": "1.0.0"
+    "description": "a service to print http or grpc request",
+    "version": "1.0",
+    "x-something-something": "yadda"
   },
   "schemes": [
     "http",
@@ -19,12 +20,18 @@
     "/v1/{type}": {
       "get": {
         "summary": "Get grpc request infos",
-        "operationId": "Info",
+        "operationId": "Server_Info",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
               "$ref": "#/definitions/infoResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
             }
           }
         },
@@ -55,12 +62,18 @@
       },
       "post": {
         "summary": "Post",
-        "operationId": "Post",
+        "operationId": "Server_Post",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
               "$ref": "#/definitions/infoResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
             }
           }
         },
@@ -134,6 +147,36 @@
         }
       },
       "description": "The Response to Server.Info."
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "typeUrl": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
     }
   }
 }

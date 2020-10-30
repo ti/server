@@ -11,10 +11,10 @@ import (
 	"github.com/clbanning/mxj"
 	"github.com/elazarl/goproxy"
 	"github.com/elazarl/goproxy/ext/auth"
-	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/ti/noframe/grpcmux"
 	log "github.com/sirupsen/logrus"
-	pb "github.com/ti/server/httpserver/pb"
+	pb "github.com/ti/server/httpserver/pkg/go"
 	"github.com/ti/server/httpserver/tcpproxy"
 	"golang.org/x/net/context/ctxhttp"
 	"golang.org/x/net/http2"
@@ -114,17 +114,26 @@ func main() {
 
 	fmt.Println("Hit CTRL-C to stop the server")
 
-	mux := grpcmux.NewServeMux()
+
+	opts := []runtime.ServeMuxOption{
+		runtime.WithErrorHandler(func(ctx context.Context, mux *runtime.ServeMux, marshaler runtime.Marshaler, w http.ResponseWriter, r *http.Request, err error) {
+			http.DefaultServeMux.ServeHTTP(w, r)
+		}),
+		runtime.WithIncomingHeaderMatcher(grpcmux.DefaultHeaderMatcher),
+	}
+
+	mux := grpcmux.NewServeMux(opts...)
 	service := &service{}
-	pb.RegisterServerServerHandlerClient(context.TODO(), mux.ServeMux, service)
+
+	ctx := context.Background()
+	pb.RegisterServerHandlerServer(ctx, mux.ServeMux, service)
 	//register all as grpc service as well
 	gs := grpc.NewServer()
 	pb.RegisterServerServer(gs, service)
 	reflection.Register(gs)
 	fs := fileServer(*dir)
-	runtime.OtherErrorHandler = func(w http.ResponseWriter, r *http.Request, msg string, code int) {
-		http.DefaultServeMux.ServeHTTP(w, r)
-	}
+
+
 	http.Handle("/_proxy/", StripPrefix("/_proxy", http.HandlerFunc(proxyHandler)))
 	http.Handle("/_info/", StripPrefix("/_info", http.HandlerFunc(httpInfo)))
 	http.Handle("/_upload/", StripPrefix("/_upload", http.HandlerFunc(upload)))
@@ -262,10 +271,18 @@ var proxys = map[string]*tcpproxy.Proxy{}
 func tcpProxyHandler(w http.ResponseWriter, r *http.Request) {
 	localAddr := r.URL.Query().Get("l")
 	remoteAddr := r.URL.Query().Get("r")
+	if localAddr == "" || remoteAddr == "" {
+		w.Write([]byte("please use ?l=:8089&r=127.0.0.1:8080"))
+		return
+	}
+
 	stop := r.URL.Query().Get("stop")
 	if stop != "" {
 		if c, ok := proxys[localAddr]; ok {
 			c.Stop()
+			w.Write([]byte("success"))
+		} else {
+			w.Write([]byte("not found"))
 		}
 		return
 	}
@@ -729,7 +746,9 @@ func GRPCMixHandler(h http.Handler, grpc *grpc.Server) http.Handler {
 	return h2c.NewHandler(mix, server)
 }
 
-type service struct{}
+type service struct {
+	pb.UnimplementedServerServer
+}
 
 type requestKey struct{}
 

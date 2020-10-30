@@ -1,6 +1,7 @@
 package tcpproxy
 
 import (
+	"context"
 	"io"
 	"net"
 	"sync"
@@ -9,17 +10,20 @@ import (
 )
 
 type Proxy struct {
-	from string
-	to   string
-	done chan struct{}
-	log  *log.Entry
+	from      string
+	to        string
+	ctx       context.Context
+	cancelFun context.CancelFunc
+	log       *log.Entry
 }
 
 func NewProxy(from, to string) *Proxy {
+	ctx, cancelFun := context.WithCancel(context.Background())
 	return &Proxy{
-		from: from,
-		to:   to,
-		done: make(chan struct{}),
+		from:      from,
+		to:        to,
+		ctx:       ctx,
+		cancelFun: cancelFun,
 		log: log.WithFields(log.Fields{
 			"from": from,
 			"to":   to,
@@ -37,20 +41,14 @@ func (p *Proxy) Start() error {
 }
 
 func (p *Proxy) Stop() {
-	if p.done == nil {
-		return
-	}
-	close(p.done)
-	p.done = nil
+	p.cancelFun()
 }
 
 func (p *Proxy) run(listener net.Listener) {
 	for {
-		if p.done == nil {
-			return
-		}
 		select {
-		case <-p.done:
+		case <-p.ctx.Done():
+			listener.Close()
 			return
 		default:
 			connection, err := listener.Accept()
@@ -75,13 +73,20 @@ func (p *Proxy) handle(connection net.Conn) {
 	wg.Add(2)
 	go p.copy(remote, connection, wg)
 	go p.copy(connection, remote, wg)
-	wg.Wait()
+	go func() {
+		wg.Wait()
+		p.cancelFun()
+	}()
+	select {
+	case <-p.ctx.Done():
+		return
+	}
 }
 
 func (p *Proxy) copy(from, to net.Conn, wg *sync.WaitGroup) {
 	defer wg.Done()
 	select {
-	case <-p.done:
+	case <-p.ctx.Done():
 		return
 	default:
 		if _, err := io.Copy(to, from); err != nil {
