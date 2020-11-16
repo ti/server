@@ -133,8 +133,10 @@ RUN /bin/rm -rf mongodb*
 ENV PATH="${PATH}:/usr/local/mongodb/bin"
 
 # pytorch
-
 RUN pip3 --no-cache-dir install torch torchvision
+
+# cqlsh
+RUN pip3 --no-cache-dir install cqlsh
 
 # clean
 RUN apt-get autoremove -y && \
