@@ -509,13 +509,26 @@ RUN \
         DIR=/build/grpc && \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
+        git clone --recurse-submodules -b v${GRPC_VERSION} https://github.com/grpc/grpc /build/grpc &&\
+
+RUN \
+        DIR=/build/grpc && \
+        mkdir -p ${DIR} && \
+        cd ${DIR} && \
         git clone --recurse-submodules -b v${GRPC_VERSION} https://github.com/grpc/grpc /build/grpc && \
         mkdir -p cmake/build && \
-        pushd cmake/build && \
+        cd cmake/build && \
         cmake -DgRPC_INSTALL=ON \
               -DgRPC_BUILD_TESTS=OFF \
               -DCMAKE_INSTALL_PREFIX="${PREFIX}" \
               ../.. && \
         make -j && \
-        make install  && \
-        popd
+        make install
+
+# todo your exmaple
+
+
+
+
+
+
