@@ -504,13 +504,7 @@ RUN \
         hash -r && \
         cd tools && \
         make qt-faststart && cp qt-faststart ${PREFIX}/bin/
-
-RUN \
-        DIR=/build/grpc && \
-        mkdir -p ${DIR} && \
-        cd ${DIR} && \
-        git clone --recurse-submodules -b v${GRPC_VERSION} https://github.com/grpc/grpc /build/grpc &&\
-
+        
 RUN \
         DIR=/build/grpc && \
         mkdir -p ${DIR} && \
@@ -526,9 +520,6 @@ RUN \
         make install
 
 # todo your exmaple
-
-
-
 
 
 
