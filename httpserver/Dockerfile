@@ -4,7 +4,7 @@ RUN apt-get -yqq update && \
     apt install -y traceroute \
     python3-dev python3-pip \
     software-properties-common openssh-server \
-    autoconf build-essential libcurl4-gnutls-dev libxml2-dev libssl-dev automake libev-dev libtool libsodium-dev \
+    autoconf build-essential cmake pkg-config libcurl4-gnutls-dev libxml2-dev libssl-dev automake libev-dev libtool libsodium-dev \
     dnsutils \
     apt-utils \
     tree nfs-common \
@@ -46,7 +46,7 @@ RUN apt update
 RUN apt install -y mysql-server mysql-client
 
 # go
-RUN curl https://dl.google.com/go/go1.15.3.linux-amd64.tar.gz -o go.tar.gz
+RUN curl https://dl.google.com/go/go1.15.6.linux-amd64.tar.gz -o go.tar.gz
 RUN tar -C /usr/local -xzf go.tar.gz
 RUN /bin/rm go.tar.gz
 RUN mkdir -p /go/bin
@@ -63,7 +63,7 @@ RUN chmod +x ./kubectl
 RUN mv ./kubectl /usr/local/bin/kubectl
 
 ## helm
-RUN curl https://get.helm.sh/helm-v3.3.0-linux-amd64.tar.gz -o helm.tar.gz
+RUN curl https://get.helm.sh/helm-v3.4.0-linux-amd64.tar.gz -o helm.tar.gz
 RUN tar -xzf helm.tar.gz
 RUN mv linux-amd64/helm /usr/local/bin
 RUN /bin/rm helm.tar.gz
