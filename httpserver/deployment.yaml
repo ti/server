@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: test
-          image: nanxi/server:v1.8.1
+          image: nanxi/server:latest
           imagePullPolicy: IfNotPresent
           env:
             - name: DOCKER_HOST
@@ -29,7 +29,7 @@ spec:
             - containerPort: 8080
               protocol: TCP
         - name: dind
-          image: docker:stable-dind
+          image: docker:dind
           args: ["--registry-mirror=https://registry.cn-hangzhou.aliyuncs.com"]
           imagePullPolicy: IfNotPresent
           env:
