@@ -23,7 +23,7 @@ const StatusClientClosedRequest = 499
 const StatusClientClosedRequestText = "Client Closed Request"
 
 
-var proxy http.Handler
+var proxierHandler http.Handler
 var defaultRoundTripper http.RoundTripper
 
 func init()  {
@@ -33,7 +33,7 @@ func init()  {
 		panic(err)
 	}
 	pool := newBufferPool()
-	proxy, err = buildProxy(false, defaultRoundTripper, pool)
+	proxierHandler, err = buildProxy(false, defaultRoundTripper, pool)
 	if err != nil {
 		panic(err)
 	}
