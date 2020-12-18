@@ -42,6 +42,7 @@ ENV         FFMPEG_VERSION=4.3.1 \
             LIBARIBB24_VERSION=1.0.3 \
             LIBPNG_VERSION=1.6.9 \
             GRPC_VERSION=1.34.0 \
+            AWS_SDK_VERSION=1.8.109 \
             SRC=/usr/local
 
 ARG         FREETYPE_SHA256SUM="5d03dd76c2171a7601e9ce10551d52d4471cf92cd205948e60289251daddffa8 freetype-2.5.5.tar.gz"
@@ -504,7 +505,7 @@ RUN \
         hash -r && \
         cd tools && \
         make qt-faststart && cp qt-faststart ${PREFIX}/bin/
-        
+
 RUN \
         DIR=/build/grpc && \
         mkdir -p ${DIR} && \
@@ -519,7 +520,26 @@ RUN \
         make -j && \
         make install
 
-# todo your exmaple
+RUN \
+        DIR=/build/grpc && \
+        mkdir -p ${DIR} && \
+        cd ${DIR} && \
+        git clone --recurse-submodules -b v${GRPC_VERSION} https://github.com/grpc/grpc /build/grpc && \
+        mkdir -p cmake/build && \
+        cd cmake/build && \
+        cmake -DgRPC_INSTALL=ON \
+              -DgRPC_BUILD_TESTS=OFF \
+              -DCMAKE_INSTALL_PREFIX="${PREFIX}" \
+              ../.. && \
+        make -j && \
+        make install
 
+RUN \
+        DIR=/build/aws-sdk-cpp && \
+        mkdir -p ${DIR} && \
+        cd ${DIR} && \
+        git clone --recurse-submodules -b ${AWS_SDK_VERSION} https://github.com/aws/aws-sdk-cpp /build/aws-sdk-cpp
+
+WORKDIR  /build
 
 
