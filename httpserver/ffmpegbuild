@@ -535,11 +535,7 @@ RUN \
         make install
 
 RUN \
-        DIR=/build/aws-sdk-cpp && \
-        mkdir -p ${DIR} && \
-        cd ${DIR} && \
-        git clone --recurse-submodules -b ${AWS_SDK_VERSION} https://github.com/aws/aws-sdk-cpp /build/aws-sdk-cpp
+        cd /build/ && \
+        git clone --recurse-submodules -b ${AWS_SDK_VERSION} https://github.com/aws/aws-sdk-cpp.git
 
 WORKDIR  /build
-
-
