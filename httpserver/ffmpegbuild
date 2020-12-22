@@ -545,6 +545,7 @@ RUN \
         cd tools && \
         make qt-faststart && cp qt-faststart ${PREFIX}/bin/
 
+## grpc
 RUN \
         DIR=/build/grpc && \
         mkdir -p ${DIR} && \
@@ -559,20 +560,6 @@ RUN \
         make -j && \
         make install
 
-RUN \
-        DIR=/build/grpc && \
-        mkdir -p ${DIR} && \
-        cd ${DIR} && \
-        git clone --recurse-submodules -b v${GRPC_VERSION} https://github.com/grpc/grpc /build/grpc && \
-        mkdir -p cmake/build && \
-        cd cmake/build && \
-        cmake -DgRPC_INSTALL=ON \
-              -DgRPC_BUILD_TESTS=OFF \
-              -DCMAKE_INSTALL_PREFIX="${PREFIX}" \
-              ../.. && \
-        make -j && \
-        make install
-        
 ## aws s3
 RUN \
         DIR=/build/aws && \
