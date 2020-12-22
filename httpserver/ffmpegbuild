@@ -43,7 +43,7 @@ ENV         FFMPEG_VERSION=4.3.1 \
             LIBPNG_VERSION=1.6.9 \
             SPEEX_VERSION=1.2.0 \
             GRPC_VERSION=1.34.0 \
-            AWS_SDK_VERSION=1.8.109 \
+            AWS_SDK_VERSION=1.8.111 \
             SRC=/usr/local
 
 ARG         FREETYPE_SHA256SUM="5d03dd76c2171a7601e9ce10551d52d4471cf92cd205948e60289251daddffa8 freetype-2.5.5.tar.gz"
@@ -572,9 +572,19 @@ RUN \
               ../.. && \
         make -j && \
         make install
-
+        
+## aws s3
 RUN \
-        cd /build/ && \
-        git clone --recurse-submodules -b ${AWS_SDK_VERSION} https://github.com/aws/aws-sdk-cpp.git
+        DIR=/build/aws && \
+        mkdir -p ${DIR} && \
+        cd ${DIR} && \
+        curl -sLO https://github.com/aws/aws-sdk-cpp/archive/${AWS_SDK_VERSION}.tar.gz && \
+        tar -xz --strip-components=1 -f ${AWS_SDK_VERSION}.tar.gz && \
+        cmake -DCMAKE_BUILD_TYPE=Release \
+              -D BUILD_ONLY="s3" \
+              -DCMAKE_INSTALL_PREFIX="${PREFIX}" \
+              . && \
+        make && \
+        make install
 
 WORKDIR  /build
