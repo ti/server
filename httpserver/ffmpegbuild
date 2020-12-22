@@ -500,7 +500,6 @@ RUN \
         --disable-doc \
         --disable-ffplay \
         --enable-shared \
-        --enable-libspeex \
         --enable-avresample \
         --enable-libopencore-amrnb \
         --enable-libopencore-amrwb \
@@ -517,6 +516,8 @@ RUN \
         --enable-libwebp \
         --enable-libxcb \
         --enable-libx265 \
+        --enable-libspeex \
+        --enable-libdavs2 \
         --enable-libxvid \
         --enable-libx264 \
         --enable-nonfree \
