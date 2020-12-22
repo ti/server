@@ -42,8 +42,9 @@ ENV         FFMPEG_VERSION=4.3.1 \
             LIBARIBB24_VERSION=1.0.3 \
             LIBPNG_VERSION=1.6.9 \
             SPEEX_VERSION=1.2.0 \
+            AV1_VERSION=0.8.0 \
             GRPC_VERSION=1.34.0 \
-            AWS_SDK_VERSION=1.8.111 \
+            AWS_SDK_VERSION=1.7.365 \
             SRC=/usr/local
 
 ARG         FREETYPE_SHA256SUM="5d03dd76c2171a7601e9ce10551d52d4471cf92cd205948e60289251daddffa8 freetype-2.5.5.tar.gz"
@@ -73,6 +74,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN      buildDeps="autoconf \
                     automake \
                     cmake \
+                    meson \
                     curl \
                     bzip2 \
                     libexpat1-dev \
@@ -88,9 +90,11 @@ RUN      buildDeps="autoconf \
                     python \
                     libssl-dev \
                     yasm \
+                    libcurl4-openssl-dev libssl-dev uuid-dev zlib1g-dev libpulse-dev \
                     zlib1g-dev" && \
         apt-get -yqq update && \
         apt-get install -yq --no-install-recommends ${buildDeps}
+        
 ## opencore-amr https://sourceforge.net/projects/opencore-amr/
 RUN \
         DIR=/build/opencore-amr && \
@@ -267,6 +271,7 @@ RUN  \
         ./configure --prefix="${PREFIX}" --disable-static --enable-shared && \
         make -j1 && \
         make install
+
 ## fontconfig https://www.freedesktop.org/wiki/Software/fontconfig/
 RUN  \
         DIR=/build/fontconfig && \
@@ -487,6 +492,18 @@ RUN \
         make && \
         make install
 
+## libdav1d
+RUN \
+        DIR=/build/dav1d && \
+        mkdir -p ${DIR} && \
+        cd ${DIR} && \
+        curl -sLO https://github.com/videolan/dav1d/archive/${AV1_VERSION}.tar.gz && \
+        tar -xz --strip-components=1 -f ${AV1_VERSION}.tar.gz && \
+        meson build --prefix ${PREFIX} --libdir ${PREFIX}/lib/x86_64-linux-gnu --buildtype release \
+        ninja -C build && \
+        cd build \
+        ninja install
+
 ## ffmpeg https://ffmpeg.org/
 RUN  \
         DIR=/build/ffmpeg && mkdir -p ${DIR} && cd ${DIR} && \
@@ -516,6 +533,7 @@ RUN \
         --enable-libwebp \
         --enable-libxcb \
         --enable-libx265 \
+        --enable-libdav1d \
         --enable-libspeex \
         --enable-libdavs2 \
         --enable-libxvid \
