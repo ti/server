@@ -94,7 +94,7 @@ RUN      buildDeps="autoconf \
                     zlib1g-dev" && \
         apt-get -yqq update && \
         apt-get install -yq --no-install-recommends ${buildDeps}
-        
+
 ## opencore-amr https://sourceforge.net/projects/opencore-amr/
 RUN \
         DIR=/build/opencore-amr && \
@@ -499,9 +499,9 @@ RUN \
         cd ${DIR} && \
         curl -sLO https://github.com/videolan/dav1d/archive/${AV1_VERSION}.tar.gz && \
         tar -xz --strip-components=1 -f ${AV1_VERSION}.tar.gz && \
-        meson build --prefix ${PREFIX} --libdir ${PREFIX}/lib/x86_64-linux-gnu --buildtype release \
+        meson build --prefix ${PREFIX} --bindir="${PREFIX}/bin"  --libdir ${PREFIX}/lib/x86_64-linux-gnu --buildtype release &&\
         ninja -C build && \
-        cd build \
+        cd build && \
         ninja install
 
 ## ffmpeg https://ffmpeg.org/
@@ -533,7 +533,6 @@ RUN \
         --enable-libwebp \
         --enable-libxcb \
         --enable-libx265 \
-        --enable-libdav1d \
         --enable-libspeex \
         --enable-libdavs2 \
         --enable-libxvid \
@@ -584,8 +583,7 @@ RUN \
         DIR=/build/aws && \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
-        curl -sLO https://github.com/aws/aws-sdk-cpp/archive/${AWS_SDK_VERSION}.tar.gz && \
-        tar -xz --strip-components=1 -f ${AWS_SDK_VERSION}.tar.gz && \
+        git clone --recurse-submodules -b ${AWS_SDK_VERSION} https://github.com/aws/aws-sdk-cpp /build/aws && \
         cmake -DCMAKE_BUILD_TYPE=Release \
               -D BUILD_ONLY="s3" \
               -DCMAKE_INSTALL_PREFIX="${PREFIX}" \
