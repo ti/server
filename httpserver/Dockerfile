@@ -85,9 +85,9 @@ RUN pip3 --no-cache-dir install --upgrade tensorflow
 RUN virtualenv --system-site-packages -p python3 ./venv
 
 # nodejs
-RUN curl https://nodejs.org/dist/v12.18.3/node-v12.18.3-linux-x64.tar.xz -o node.tar.xz
+RUN curl https://nodejs.org/dist/v14.15.3/node-v14.15.3-linux-x64.tar.xz -o node.tar.xz
 RUN tar -xJvf node.tar.xz
-RUN mv node-v12.18.3-linux-x64 /usr/local/nodejs
+RUN mv node-v14.15.3-linux-x64 /usr/local/nodejs
 ENV PATH="${PATH}:/usr/local/nodejs/bin"
 
 # java
