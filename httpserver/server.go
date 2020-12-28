@@ -40,7 +40,7 @@ import (
 
 var (
 	port          = flag.Int("p", 8080, "port to listen")
-	logBody       = flag.Bool("l", false, "write http body log on std out")
+	logBody       = flag.Bool("l", true, "write http body log on std out")
 	cors          = flag.Bool("cors", true, "enable cors?")
 	decodeBody    = flag.Bool("b", false, "decode as struct")
 	dir           = flag.String("d", "./", "dir to server")
@@ -61,6 +61,8 @@ func main() {
 		fmt.Printf("\u001b[31m[ERROR] %s\u001b[0m\n", err)
 		return
 	}
+	log.SetFormatter(&log.JSONFormatter{})
+	log.SetLevel(log.DebugLevel)
 	if *proxyURL != "" {
 		fmt.Println("setting proxy")
 		proxyURI, err := url.Parse(*proxyURL)
@@ -135,6 +137,7 @@ func main() {
 
 
 	http.Handle("/_proxy/", StripPrefix("/_proxy", http.HandlerFunc(proxyHandler)))
+	http.Handle("/_log/", StripPrefix("/_log", http.HandlerFunc(logHandler)))
 	http.Handle("/_info/", StripPrefix("/_info", http.HandlerFunc(httpInfo)))
 	http.Handle("/_upload/", StripPrefix("/_upload", http.HandlerFunc(upload)))
 	http.Handle("/_www/", StripPrefix("/_www", fs))
@@ -294,6 +297,23 @@ func tcpProxyHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	proxys[localAddr] = proxy
 	w.Write([]byte(fmt.Sprintf("started for %s for %s", localAddr, remoteAddr)))
+}
+
+
+// logHandler test the log writer
+// logJSON：POST {"level":"info","msg":"test","time":"2020-12-28T11:15:16+08:00"}\n
+// logText：POST test\ntestx\n
+func logHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.NotFound(w, r)
+		return
+	}
+	b, _ := ioutil.ReadAll(r.Body)
+	if len(b) == 0 {
+		panic("body is nil")
+	}
+	b = bytes.Replace(b, []byte(`\n`), []byte("\n"), -1)
+	fmt.Print(string(b))
 }
 func proxyHandler(w http.ResponseWriter, r *http.Request) {
 	tokenName := "/token/"
@@ -504,7 +524,8 @@ func getRequestInfo(r *http.Request) *request {
 	req.Proto = r.Proto
 	req.ContentLength = r.ContentLength
 	contentType := r.Header.Get("Content-Type")
-
+	reqBody, _ := ioutil.ReadAll(r.Body)
+	r.Body = ioutil.NopCloser(bytes.NewReader(reqBody))
 	if !strings.HasPrefix(contentType, "application/grpc") {
 		if *decodeBody {
 			if strings.Contains(contentType, "json") {
@@ -519,8 +540,7 @@ func getRequestInfo(r *http.Request) *request {
 				r.ParseForm()
 				req.Body = r.PostForm
 			} else if strings.Contains(contentType, "xml") {
-				b, _ := ioutil.ReadAll(r.Body)
-				data, err := mxj.NewMapXml(b)
+				data, err := mxj.NewMapXml(reqBody)
 				if err == nil {
 					req.Body = data
 				} else {
@@ -532,15 +552,13 @@ func getRequestInfo(r *http.Request) *request {
 				if r.Method == "GET" || r.Method == "DELETE" {
 					req.Body = ""
 				} else {
-					if b, _ := ioutil.ReadAll(r.Body); len(b) > 0 {
-						req.Body = string(b)
+					if len(reqBody) > 0 {
+						req.Body = string(reqBody)
 					}
 				}
 			}
 		} else {
-			if b, _ := ioutil.ReadAll(r.Body); len(b) > 0 {
-				req.Body = b
-			}
+			req.Body = string(reqBody)
 		}
 	}
 	req.RemoteIP = getIP(r).String()
@@ -734,7 +752,9 @@ func GRPCMixHandler(h http.Handler, grpc *grpc.Server) http.Handler {
 			enableCors(w, r)
 		}
 		req := getRequestInfo(r)
-		logReq("grpc_mix", req)
+		if !strings.HasPrefix(r.URL.Path, "/_log") {
+			logReq("grpc_mix", req)
+		}
 		ctx := context.WithValue(r.Context(), requestKey{}, req)
 		if r.ProtoMajor == 2 && strings.HasPrefix(r.Header.Get("Content-Type"), "application/grpc") {
 			grpc.ServeHTTP(w, r.WithContext(ctx))
