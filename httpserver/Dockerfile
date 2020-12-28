@@ -95,9 +95,9 @@ RUN apt install -y default-jdk
 RUN apt install -y maven
 
 # kafka
-RUN curl https://downloads.apache.org/kafka/2.5.0/kafka_2.12-2.5.0.tgz -o kafka.tgz
+RUN curl https://downloads.apache.org/kafka/2.7.0/kafka_2.13-2.7.0.tgz -o kafka.tgz
 RUN tar xzf kafka.tgz
-RUN mv kafka_2.12-2.5.0 /usr/local/kafka
+RUN mv kafka_2.13-2.7.0 /usr/local/kafka
 RUN /bin/rm -rf kafka*
 ENV PATH="${PATH}:/usr/local/kafka/bin"
 
