@@ -576,7 +576,8 @@ RUN \
               -DCMAKE_INSTALL_PREFIX="${PREFIX}" \
               ../.. && \
         make -j && \
-        make install
+        make install && \
+        cp -f ${DIR}/src/core/ext/upb-generated/src/proto ${PREFIX}/include/
 
 ## aws s3
 RUN \
