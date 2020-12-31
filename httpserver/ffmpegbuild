@@ -580,6 +580,7 @@ RUN \
         cd ${DIR}/src/proto && \
         ${PREFIX}/bin/protoc --cpp_out=${PREFIX}/include ./grpc/core/*.proto ./grpc/health/**/*.proto && \
         cd ${DIR}/third_party/googleapis && \
+        cp -rf ./google/rpc ${PREFIX}/include/google/rpc && \
         ${PREFIX}/bin/protoc --cpp_out=${PREFIX}/include ./google/rpc/*.proto
 
 ## aws s3
