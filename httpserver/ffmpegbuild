@@ -577,7 +577,10 @@ RUN \
               ../.. && \
         make -j && \
         make install && \
-        cp -f ${DIR}/src/core/ext/upb-generated/src/proto ${PREFIX}/include/
+        cd ${DIR}/src/proto && \
+        ${PREFIX}/bin/protoc --cpp_out=${PREFIX}/include ./grpc/core/*.proto ./grpc/health/**/*.proto && \
+        cd ${DIR}/third_party/googleapis && \
+        ${PREFIX}/bin/protoc --cpp_out=${PREFIX}/include ./google/rpc/*.proto
 
 ## aws s3
 RUN \
