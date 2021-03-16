@@ -46,7 +46,7 @@ RUN apt update
 RUN apt install -y mysql-server mysql-client
 
 # go
-RUN curl https://dl.google.com/go/go1.15.6.linux-amd64.tar.gz -o go.tar.gz
+RUN curl https://dl.google.com/go/go1.16.2.linux-amd64.tar.gz -o go.tar.gz
 RUN tar -C /usr/local -xzf go.tar.gz
 RUN /bin/rm go.tar.gz
 RUN mkdir -p /go/bin
@@ -63,7 +63,7 @@ RUN chmod +x ./kubectl
 RUN mv ./kubectl /usr/local/bin/kubectl
 
 ## helm
-RUN curl https://get.helm.sh/helm-v3.4.0-linux-amd64.tar.gz -o helm.tar.gz
+RUN curl https://get.helm.sh/helm-v3.5.3-linux-amd64.tar.gz -o helm.tar.gz
 RUN tar -xzf helm.tar.gz
 RUN mv linux-amd64/helm /usr/local/bin
 RUN /bin/rm helm.tar.gz
@@ -85,7 +85,7 @@ RUN pip3 --no-cache-dir install --upgrade tensorflow
 RUN virtualenv --system-site-packages -p python3 ./venv
 
 # nodejs
-RUN curl https://nodejs.org/dist/v14.15.3/node-v14.15.3-linux-x64.tar.xz -o node.tar.xz
+RUN curl https://nodejs.org/dist/v14.16.0/node-v14.15.3-linux-x64.tar.xz -o node.tar.xz
 RUN tar -xJvf node.tar.xz
 RUN mv node-v14.15.3-linux-x64 /usr/local/nodejs
 ENV PATH="${PATH}:/usr/local/nodejs/bin"
@@ -111,7 +111,7 @@ RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
 RUN add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
 RUN apt update
 RUN apt install -y docker-ce docker-ce-cli containerd.io
-RUN curl -L https://github.com/docker/compose/releases/download/1.27.4/docker-compose-Linux-x86_64 -o /usr/local/bin/docker-compose
+RUN curl -L https://github.com/docker/compose/releases/download/1.28.5/docker-compose-Linux-x86_64 -o /usr/local/bin/docker-compose
 RUN chmod +x /usr/local/bin/docker-compose
 
 ## openssh
@@ -145,7 +145,7 @@ RUN apt-get autoremove -y && \
     apt-get clean -y
 
 # Pulsar
-RUN curl https://archive.apache.org/dist/pulsar/pulsar-2.6.0/apache-pulsar-2.6.0-bin.tar.gz -o apache-pulsar.tar.gz
+RUN curl https://archive.apache.org/dist/pulsar/pulsar-2.7.0/apache-pulsar-2.7.0-bin.tar.gz -o apache-pulsar.tar.gz
 RUN tar xzf apache-pulsar.tar.gz
 RUN mv apache-pulsar-2.6.0 /usr/local/pulsar
 RUN /bin/rm -rf pulsar*
