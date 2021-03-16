@@ -85,9 +85,9 @@ RUN pip3 --no-cache-dir install --upgrade tensorflow
 RUN virtualenv --system-site-packages -p python3 ./venv
 
 # nodejs
-RUN curl https://nodejs.org/dist/v14.16.0/node-v14.15.3-linux-x64.tar.xz -o node.tar.xz
+RUN curl https://nodejs.org/dist/v14.16.0/node-v14.16.0-linux-x64.tar.xz -o node.tar.xz
 RUN tar -xJvf node.tar.xz
-RUN mv node-v14.15.3-linux-x64 /usr/local/nodejs
+RUN mv node-v14.16.0-linux-x64 /usr/local/nodejs
 ENV PATH="${PATH}:/usr/local/nodejs/bin"
 
 # java
@@ -147,7 +147,7 @@ RUN apt-get autoremove -y && \
 # Pulsar
 RUN curl https://archive.apache.org/dist/pulsar/pulsar-2.7.0/apache-pulsar-2.7.0-bin.tar.gz -o apache-pulsar.tar.gz
 RUN tar xzf apache-pulsar.tar.gz
-RUN mv apache-pulsar-2.6.0 /usr/local/pulsar
+RUN mv apache-pulsar-2.7.0 /usr/local/pulsar
 RUN /bin/rm -rf pulsar*
 ENV PATH="${PATH}:/usr/local/pulsar/bin"
 
