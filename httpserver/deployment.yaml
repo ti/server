@@ -30,7 +30,7 @@ spec:
               protocol: TCP
         - name: dind
           image: docker:dind
-          args: ["--registry-mirror=https://registry.cn-hangzhou.aliyuncs.com"]
+          args: ["--registry-mirror=https://registry.cn-hangzhou.aliyuncs.com", "--host=tcp://127.0.0.1:2375"]
           imagePullPolicy: IfNotPresent
           env:
             - name: DOCKER_TLS_CERTDIR
