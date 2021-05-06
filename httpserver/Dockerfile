@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM ubuntu:21.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get -yqq update && \
     apt install -y traceroute \
@@ -46,7 +46,7 @@ RUN apt update
 RUN apt install -y mysql-server mysql-client
 
 # go
-RUN curl https://dl.google.com/go/go1.16.2.linux-amd64.tar.gz -o go.tar.gz
+RUN curl https://dl.google.com/go/go1.16.3.linux-amd64.tar.gz -o go.tar.gz
 RUN tar -C /usr/local -xzf go.tar.gz
 RUN /bin/rm go.tar.gz
 RUN mkdir -p /go/bin
@@ -89,6 +89,7 @@ RUN curl https://nodejs.org/dist/v14.16.0/node-v14.16.0-linux-x64.tar.xz -o node
 RUN tar -xJvf node.tar.xz
 RUN mv node-v14.16.0-linux-x64 /usr/local/nodejs
 ENV PATH="${PATH}:/usr/local/nodejs/bin"
+RUN npm install --global yarn
 
 # java
 RUN apt install -y default-jdk
