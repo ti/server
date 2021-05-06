@@ -90,6 +90,7 @@ RUN tar -xJvf node.tar.xz
 RUN mv node-v14.16.0-linux-x64 /usr/local/nodejs
 ENV PATH="${PATH}:/usr/local/nodejs/bin"
 RUN npm install --global yarn
+RUN npm install --global typescript
 
 # java
 RUN apt install -y default-jdk
