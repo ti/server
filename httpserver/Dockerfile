@@ -46,7 +46,7 @@ RUN apt update
 RUN apt install -y mysql-server mysql-client
 
 # go
-RUN curl https://dl.google.com/go/go1.16.3.linux-amd64.tar.gz -o go.tar.gz
+RUN curl https://dl.google.com/go/go1.16.5.linux-amd64.tar.gz -o go.tar.gz
 RUN tar -C /usr/local -xzf go.tar.gz
 RUN /bin/rm go.tar.gz
 RUN mkdir -p /go/bin
@@ -63,7 +63,7 @@ RUN chmod +x ./kubectl
 RUN mv ./kubectl /usr/local/bin/kubectl
 
 ## helm
-RUN curl https://get.helm.sh/helm-v3.5.3-linux-amd64.tar.gz -o helm.tar.gz
+RUN curl https://get.helm.sh/helm-v3.6.1-linux-amd64.tar.gz -o helm.tar.gz
 RUN tar -xzf helm.tar.gz
 RUN mv linux-amd64/helm /usr/local/bin
 RUN /bin/rm helm.tar.gz
@@ -85,9 +85,9 @@ RUN pip3 --no-cache-dir install --upgrade tensorflow
 RUN virtualenv --system-site-packages -p python3 ./venv
 
 # nodejs
-RUN curl https://nodejs.org/dist/v14.16.0/node-v14.16.0-linux-x64.tar.xz -o node.tar.xz
+RUN curl https://nodejs.org/dist/v14.17.1/node-v14.17.1-linux-x64.tar.xz -o node.tar.xz
 RUN tar -xJvf node.tar.xz
-RUN mv node-v14.16.0-linux-x64 /usr/local/nodejs
+RUN mv node-v14.17.1-linux-x64 /usr/local/nodejs
 ENV PATH="${PATH}:/usr/local/nodejs/bin"
 RUN npm install --global yarn
 RUN npm install --global typescript
@@ -97,9 +97,9 @@ RUN apt install -y default-jdk
 RUN apt install -y maven
 
 # kafka
-RUN curl https://downloads.apache.org/kafka/2.7.0/kafka_2.13-2.7.0.tgz -o kafka.tgz
+RUN curl https://downloads.apache.org/kafka/2.8.0/kafka_2.13-2.8.0.tgz -o kafka.tgz
 RUN tar xzf kafka.tgz
-RUN mv kafka_2.13-2.7.0 /usr/local/kafka
+RUN mv kafka_2.13-2.8.0 /usr/local/kafka
 RUN /bin/rm -rf kafka*
 ENV PATH="${PATH}:/usr/local/kafka/bin"
 
