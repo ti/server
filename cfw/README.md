@@ -66,3 +66,41 @@ $ sudo apt-get install docker-ce docker-ce-cli containerd.io
 $ sudo adduser ${USER} docker 
 $ su ${USER}
 ```
+
+### Google Cloud Run (Serverless)
+
+#### 1. Enter Google Cloud RUN
+
+https://console.cloud.google.com/run
+
+#### 2. Create Service
+   
+   ##### 2.1 ServiceName： v2ray
+   ##### 2.2 Image: gcr.io/v2ray-318304/v2fly-core:env
+       ImageSource `https://hub.docker.com/r/nanxi/v2fly-core`
+   ##### 2.3 VARIABLES & SECRETS:
+   
+   Environment variables:
+   
+   ```bash
+   V2RAY_CONFIG
+   ```
+   
+   ```json
+    {"log":{"loglevel":"info"},"inbounds":[{"port":8080,"protocol":"vmess","settings":{"clients":[{"id":"8b58e08c-d8c0-11eb-b8bc-0242ac130003","alterId":64}]},"streamSettings":{"network":"http","httpSettings":{"host":["domain.a.run.app"],"path":"/v2/h2"},"sockopt":{"tcpFastOpen":true}}}],"outbounds":[{"protocol":"freedom","settings":{}}]}
+   ```
+   ##### 2.4 CONNECTIONS
+   
+   [x] Enable http/2 connections
+
+#### 3. Deploy and get a deploy domain `v2ray-5v2hmw3czq-ac.a.run.app`
+   
+#### 4. Change the 2.3's `domain.a.run.app` to your domain
+
+
+    4.1 Go to `Edit & deploy new revision`
+   
+    4.2 Go to `VARIABLES & SECRETS`, change V2RAY_CONFIG value to `domain.a.run.app` to `v2ray-5v2hmw3czq-ac.a.run.app`
+   
+----
+
