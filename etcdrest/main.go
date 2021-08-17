@@ -7,8 +7,10 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"go.etcd.io/etcd/clientv3"
-	"go.etcd.io/etcd/pkg/tlsutil"
+	"go.etcd.io/etcd/client/pkg/v3/tlsutil"
+
+	"go.etcd.io/etcd/client/pkg/v3/transport"
+	clientv3 "go.etcd.io/etcd/client/v3"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -30,7 +32,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	client, err = newEtcdClient(etcdURL)
+	ctx, _ := context.WithTimeout(context.Background(), 3 * time.Second)
+	client, err = newEtcdClient(ctx, etcdURL)
 	if err != nil {
 		panic(err)
 	}
@@ -160,27 +163,41 @@ func marshal(src interface{}) (ret []byte) {
 	return
 }
 
-func newEtcdClient(etcdUri *url.URL) (*clientv3.Client, error) {
+// newEtcdClient new etcd client
+func newEtcdClient(ctx context.Context, uri *url.URL) (*clientv3.Client, error) {
 	etcdConfig := clientv3.Config{
-		Endpoints:   strings.Split(etcdUri.Host, ","),
-		DialTimeout: 30 * time.Second,
+		Endpoints:   strings.Split(uri.Host, ","),
+		DialTimeout: 10 * time.Second,
+		Context:     ctx,
 	}
-	if etcdUri.User != nil && etcdUri.User.Username() != "" {
-		etcdConfig.Username = etcdUri.User.Username()
-		etcdConfig.Password, _ = etcdUri.User.Password()
+	if uri.User != nil && uri.User.Username() != "" {
+		etcdConfig.Username = uri.User.Username()
+		etcdConfig.Password, _ = uri.User.Password()
 	}
-	etcdUriQuery := etcdUri.Query()
-	certFile := etcdUriQuery.Get("cert")
-	if certFile != "" {
-		keyFile := etcdUriQuery.Get("key")
-		trustedCAFile := etcdUriQuery.Get("ca")
-		tlsConfig, err := newTlsConfig(certFile, keyFile, trustedCAFile)
+	query := uri.Query()
+	if cert := query.Get("cert"); cert != "" {
+		key := query.Get("key")
+		ca := query.Get("ca")
+		tlsInfo := transport.TLSInfo{
+			CertFile:      cert,
+			KeyFile:       key,
+			TrustedCAFile: ca,
+		}
+		tlsConfig, err := tlsInfo.ClientConfig()
 		if err != nil {
 			return nil, err
 		}
 		etcdConfig.TLS = tlsConfig
 	}
-	return clientv3.New(etcdConfig)
+	cli, err := clientv3.New(etcdConfig)
+	if err != nil {
+		return nil, err
+	}
+	_, err = cli.Status(ctx, uri.Host)
+	if err != nil {
+		return nil, err
+	}
+	return cli, nil
 }
 
 func newTlsConfig(certFile, keyFile, trustedCAFile string) (c *tls.Config, err error) {
