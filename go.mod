@@ -1,8 +1,9 @@
 module github.com/ti/server
 
-go 1.15
+go 1.16
 
 require (
-	go.etcd.io/etcd v0.5.0-alpha.5.0.20200930091422-40b71074e82b // lastest 3.4 version
-	google.golang.org/grpc v1.29.1
+	go.etcd.io/etcd/client/pkg/v3 v3.5.0
+	go.etcd.io/etcd/client/v3 v3.5.0
+	google.golang.org/grpc v1.40.0 // indirect
 )
