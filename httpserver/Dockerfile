@@ -46,7 +46,7 @@ RUN apt update
 RUN apt install -y mysql-server mysql-client
 
 # go
-RUN curl https://dl.google.com/go/go1.16.5.linux-amd64.tar.gz -o go.tar.gz
+RUN curl https://dl.google.com/go/go1.17.linux-amd64.tar.gz -o go.tar.gz
 RUN tar -C /usr/local -xzf go.tar.gz
 RUN /bin/rm go.tar.gz
 RUN mkdir -p /go/bin
@@ -63,7 +63,7 @@ RUN chmod +x ./kubectl
 RUN mv ./kubectl /usr/local/bin/kubectl
 
 ## helm
-RUN curl https://get.helm.sh/helm-v3.6.1-linux-amd64.tar.gz -o helm.tar.gz
+RUN curl https://get.helm.sh/helm-v3.6.3-linux-amd64.tar.gz -o helm.tar.gz
 RUN tar -xzf helm.tar.gz
 RUN mv linux-amd64/helm /usr/local/bin
 RUN /bin/rm helm.tar.gz
@@ -85,9 +85,9 @@ RUN pip3 --no-cache-dir install --upgrade tensorflow
 RUN virtualenv --system-site-packages -p python3 ./venv
 
 # nodejs
-RUN curl https://nodejs.org/dist/v14.17.1/node-v14.17.1-linux-x64.tar.xz -o node.tar.xz
+RUN curl https://nodejs.org/dist/v14.17.5/node-v14.17.5-linux-x64.tar.xz -o node.tar.xz
 RUN tar -xJvf node.tar.xz
-RUN mv node-v14.17.1-linux-x64 /usr/local/nodejs
+RUN mv node-v14.17.5-linux-x64 /usr/local/nodejs
 ENV PATH="${PATH}:/usr/local/nodejs/bin"
 RUN npm install --global yarn
 RUN npm install --global typescript
@@ -113,7 +113,7 @@ RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
 RUN add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
 RUN apt update
 RUN apt install -y docker-ce docker-ce-cli containerd.io
-RUN curl -L https://github.com/docker/compose/releases/download/1.28.5/docker-compose-Linux-x86_64 -o /usr/local/bin/docker-compose
+RUN curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-Linux-x86_64 -o /usr/local/bin/docker-compose
 RUN chmod +x /usr/local/bin/docker-compose
 
 ## openssh
@@ -126,13 +126,13 @@ RUN sed -i 's/PasswordAuthentication .*/PasswordAuthentication yes/g' /etc/ssh/s
 RUN sed -i 's/#Port .*/Port 2022/g' /etc/ssh/sshd_config
 
 # mongodb
-RUN curl https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2004-x86_64-100.1.1.tgz -o mongodb-database-tools.tgz
-RUN curl https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-ubuntu2004-4.4.0.tgz -o mongodb.tgz
+RUN curl https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2004-x86_64-100.5.0.tgz -o mongodb-database-tools.tgz
+RUN curl https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-ubuntu2004-5.0.2.tgz -o mongodb.tgz
 RUN tar xzf mongodb-database-tools.tgz
 RUN tar xzf mongodb.tgz
 RUN mkdir -p /usr/local/mongodb/bin/
-RUN mv mongodb-database-tools-ubuntu2004-x86_64-100.1.1/bin/* /usr/local/mongodb/bin/
-RUN mv mongodb-linux-x86_64-ubuntu2004-4.4.0/bin/* /usr/local/mongodb/bin/
+RUN mv mongodb-database-tools-ubuntu2004-x86_64-100.5.0/bin/* /usr/local/mongodb/bin/
+RUN mv mongodb-linux-x86_64-ubuntu2004-5.0.2/bin/* /usr/local/mongodb/bin/
 RUN /bin/rm -rf mongodb*
 ENV PATH="${PATH}:/usr/local/mongodb/bin"
 
@@ -147,9 +147,9 @@ RUN apt-get autoremove -y && \
     apt-get clean -y
 
 # Pulsar
-RUN curl https://archive.apache.org/dist/pulsar/pulsar-2.7.0/apache-pulsar-2.7.0-bin.tar.gz -o apache-pulsar.tar.gz
+RUN curl https://archive.apache.org/dist/pulsar/pulsar-2.8.0/apache-pulsar-2.8.0-bin.tar.gz -o apache-pulsar.tar.gz
 RUN tar xzf apache-pulsar.tar.gz
-RUN mv apache-pulsar-2.7.0 /usr/local/pulsar
+RUN mv apache-pulsar-2.8.0 /usr/local/pulsar
 RUN /bin/rm -rf pulsar*
 ENV PATH="${PATH}:/usr/local/pulsar/bin"
 
