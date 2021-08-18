@@ -32,8 +32,8 @@ RUN apt-get -yqq update && \
     apt-transport-https \
     gnupg-agent \
     libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev zlib1g-dev && \
-    apt-get autoremove -y && \
-    apt-get clean -y
+    apt autoremove -y && \
+    apt clean -y
 
 # postgres
 RUN curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
