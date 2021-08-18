@@ -120,7 +120,8 @@ RUN go get github.com/ti/server/httpserver
 RUN go get github.com/ti/server/httpserver/client
 RUN go get github.com/anacrolix/torrent/cmd/...
 RUN go clean --modcache
-RUN mv /go/bin /app/
+RUN cp -rf /go/bin /app/
+RUN rm -rf /go/bin
 RUN rm -rf /go/src/
 RUN rm -rf /go/pkg/
 
