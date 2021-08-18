@@ -1,6 +1,6 @@
 FROM ubuntu:20.04
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get -yqq update && \
+RUN apt -yqq update && \
     apt install -y traceroute \
     python3-dev python3-pip \
     software-properties-common openssh-server \
@@ -18,8 +18,7 @@ RUN apt install -y default-jdk
 RUN apt install -y maven
 
 # ffmpeg
-RUN apt-get -yqq update && \
-    apt-get install -yq ffmpeg
+RUN apt-get install -yq ffmpeg
 
 # pytorch
 RUN pip3 --no-cache-dir install torch torchvision
@@ -31,12 +30,14 @@ RUN pip3 --no-cache-dir install cqlsh
 RUN apt install -y shadowsocks-libev
 
 # TensorFlow
-RUN mkdir /tf/
-WORKDIR /tf/
+
 RUN pip3 --no-cache-dir install -U virtualenv
 RUN pip3 --no-cache-dir install --upgrade setuptools
 RUN pip3 --no-cache-dir install --upgrade tensorflow
-RUN virtualenv --system-site-packages -p python3 ./venv
+
+RUN mkdir /tf/
+WORKDIR /tf/
+RUN virtualenv --system-site-packages -p python3 /tf/venv
 
 WORKDIR /tmp/
 
