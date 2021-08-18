@@ -35,6 +35,15 @@ RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg ma
 RUN apt update
 RUN apt install -y postgresql-13 postgresql-client-13
 
+## docker
+RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+RUN add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+RUN apt update
+RUN apt install -y docker-ce docker-ce-cli containerd.io
+RUN curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-Linux-x86_64 -o /usr/local/bin/docker-compose
+RUN chmod +x /usr/local/bin/docker-compose
+
+
 # TensorFlow
 RUN pip3 --no-cache-dir install -U virtualenv
 RUN pip3 --no-cache-dir install --upgrade setuptools
@@ -74,7 +83,7 @@ RUN chmod +x /usr/local/bin/kubectl
 # nodejs
 RUN curl https://nodejs.org/dist/v14.17.5/node-v14.17.5-linux-x64.tar.xz -o node.tar.xz
 RUN tar -xJvf node.tar.xz
-RUN cp -rf node-v14.17.5-linux-x64 /usr/local/nodejs
+RUN mv node-v14.17.5-linux-x64 /usr/local/nodejs
 ENV PATH="${PATH}:/usr/local/nodejs/bin"
 RUN npm install --global yarn
 RUN npm install --global typescript
@@ -82,17 +91,9 @@ RUN npm install --global typescript
 # kafka
 RUN curl https://downloads.apache.org/kafka/2.8.0/kafka_2.13-2.8.0.tgz -o kafka.tgz
 RUN tar xzf kafka.tgz
-RUN cp -rf kafka_2.13-2.8.0 /usr/local/kafka
+RUN mv kafka_2.13-2.8.0 /usr/local/kafka
 RUN /bin/rm -rf kafka*
 ENV PATH="${PATH}:/usr/local/kafka/bin"
-
-## docker
-RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
-RUN add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-RUN apt update
-RUN apt install -y docker-ce docker-ce-cli containerd.io
-RUN curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-Linux-x86_64 -o /usr/local/bin/docker-compose
-RUN chmod +x /usr/local/bin/docker-compose
 
 ## openssh
 RUN mkdir /var/run/sshd
@@ -109,14 +110,14 @@ RUN curl https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-ubuntu2004-5.0.2.
 RUN tar xzf mongodb-database-tools.tgz
 RUN tar xzf mongodb.tgz
 RUN mkdir -p /usr/local/mongodb/bin/
-RUN cp -rf mongodb-database-tools-ubuntu2004-x86_64-100.5.0/bin/* /usr/local/mongodb/bin/
-RUN cp -rf mongodb-linux-x86_64-ubuntu2004-5.0.2/bin/* /usr/local/mongodb/bin/
+RUN mv mongodb-database-tools-ubuntu2004-x86_64-100.5.0/bin/* /usr/local/mongodb/bin/
+RUN mv mongodb-linux-x86_64-ubuntu2004-5.0.2/bin/* /usr/local/mongodb/bin/
 ENV PATH="${PATH}:/usr/local/mongodb/bin"
 
 # Pulsar
 RUN curl https://archive.apache.org/dist/pulsar/pulsar-2.8.0/apache-pulsar-2.8.0-bin.tar.gz -o apache-pulsar.tar.gz
 RUN tar xzf apache-pulsar.tar.gz
-RUN cp -rf apache-pulsar-2.8.0 /usr/local/pulsar
+RUN mv apache-pulsar-2.8.0 /usr/local/pulsar
 ENV PATH="${PATH}:/usr/local/pulsar/bin"
 
 # tools
@@ -126,7 +127,7 @@ RUN go get github.com/ti/server/httpserver
 RUN go get github.com/ti/server/httpserver/client
 RUN go get github.com/anacrolix/torrent/cmd/...
 RUN go clean --modcache
-RUN cp -rf /go/bin /app/
+RUN mv /go/bin /app/
 RUN rm -rf /go/bin
 RUN rm -rf /go/src/
 RUN rm -rf /go/pkg/
