@@ -122,10 +122,9 @@ ENV PATH="${PATH}:/usr/local/pulsar/bin"
 
 # tools
 ENV GOPROXY=https://goproxy.io
-RUN go get github.com/ti/server/etcdrest
-RUN go get github.com/ti/server/httpserver
-RUN go get github.com/ti/server/httpserver/client
-RUN go get github.com/anacrolix/torrent/cmd/...
+RUN go install github.com/ti/server/etcdrest@latest
+RUN go install github.com/ti/server/httpserver@latest
+RUN go install github.com/ti/server/httpserver/client@latest
 RUN go clean --modcache
 RUN mv /go/bin /app/
 RUN rm -rf /go/bin
