@@ -5,73 +5,27 @@ RUN apt-get -yqq update && \
     python3-dev python3-pip \
     software-properties-common openssh-server \
     autoconf build-essential cmake pkg-config libcurl4-gnutls-dev libxml2-dev libssl-dev automake libev-dev libtool libsodium-dev \
-    dnsutils \
-    apt-utils \
-    tree nfs-common \
-    mtr-tiny \
-    iputils-ping \
-    netcat-openbsd \
-    wget \
-    telnet \
-    curl \
-    zsh powerline fonts-powerline \
-    htop \
-    tcpdump \
-    nmap \
-    iperf \
-    gnupg \
-    gnupg2 \
-    net-tools \
-    openssh-client \
-    git \
-    vim \
-    curl \
-    wget \
-    redis-server \
-    jq \
-    apt-transport-https \
-    gnupg-agent \
-    libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev zlib1g-dev && \
-    apt autoremove -y && \
-    apt clean -y
-
-# postgres
-RUN curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
-RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" | tee  /etc/apt/sources.list.d/pgdg.list
-RUN apt update
-RUN apt install -y postgresql-13 postgresql-client-13
+    dnsutils apt-utils tree nfs-common mtr-tiny iputils-ping netcat-openbsd wget zip unzip telnet curl zsh powerline fonts-powerline htop \
+    tcpdump nmap iperf gnupg gnupg2 net-tools openssh-client git vim curl wget redis-server jq apt-transport-https gnupg-agent \
+    libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev zlib1g-dev
 
 # mysql
 RUN apt update
 RUN apt install -y mysql-server mysql-client
 
-# go
-RUN curl https://dl.google.com/go/go1.17.linux-amd64.tar.gz -o go.tar.gz
-RUN tar -C /usr/local -xzf go.tar.gz
-RUN /bin/rm go.tar.gz
-RUN mkdir -p /go/bin
-ENV PATH="${PATH}:/go/bin:/usr/local/go/bin"
-ENV GOPATH="/go"
+# java
+RUN apt install -y default-jdk
+RUN apt install -y maven
 
-ENV CGO_ENABLED=0
-ENV GOOS=linux
-ENV GO111MODULE=on
+# ffmpeg
+RUN apt-get -yqq update && \
+    apt-get install -yq ffmpeg
 
-## kubenetes
-RUN curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl"
-RUN chmod +x ./kubectl
-RUN mv ./kubectl /usr/local/bin/kubectl
+# pytorch
+RUN pip3 --no-cache-dir install torch torchvision
 
-## helm
-RUN curl https://get.helm.sh/helm-v3.6.3-linux-amd64.tar.gz -o helm.tar.gz
-RUN tar -xzf helm.tar.gz
-RUN mv linux-amd64/helm /usr/local/bin
-RUN /bin/rm helm.tar.gz
-
-# v2ray
-RUN curl -O https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install-release.sh
-RUN bash install-release.sh
-RUN rm install-release.sh
+# cqlsh
+RUN pip3 --no-cache-dir install cqlsh
 
 # shadowsocks
 RUN apt install -y shadowsocks-libev
@@ -84,29 +38,47 @@ RUN pip3 --no-cache-dir install --upgrade setuptools
 RUN pip3 --no-cache-dir install --upgrade tensorflow
 RUN virtualenv --system-site-packages -p python3 ./venv
 
+WORKDIR /tmp/
+
+# helm
+RUN curl https://get.helm.sh/helm-v3.6.3-linux-amd64.tar.gz -o helm.tar.gz
+RUN tar -xzf helm.tar.gz
+RUN cp linux-amd64/helm /usr/local/bin/
+
+# v2ray
+RUN curl -O https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install-release.sh
+RUN bash install-release.sh
+RUN rm install-release.sh
+
+# go
+RUN curl https://dl.google.com/go/go1.17.linux-amd64.tar.gz -o go.tar.gz
+RUN tar -C /usr/local -xzf go.tar.gz
+RUN mkdir -p /go/bin
+ENV PATH="${PATH}:/go/bin:/usr/local/go/bin"
+ENV GOPATH="/go"
+
+ENV CGO_ENABLED=0
+ENV GOOS=linux
+ENV GO111MODULE=on
+
+# kubenetes
+RUN curl -L "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" -o /usr/local/bin/kubectl
+RUN chmod +x /usr/local/bin/kubectl
+
 # nodejs
 RUN curl https://nodejs.org/dist/v14.17.5/node-v14.17.5-linux-x64.tar.xz -o node.tar.xz
 RUN tar -xJvf node.tar.xz
-RUN mv node-v14.17.5-linux-x64 /usr/local/nodejs
+RUN cp -rf node-v14.17.5-linux-x64 /usr/local/nodejs
 ENV PATH="${PATH}:/usr/local/nodejs/bin"
 RUN npm install --global yarn
 RUN npm install --global typescript
 
-# java
-RUN apt install -y default-jdk
-RUN apt install -y maven
-
 # kafka
 RUN curl https://downloads.apache.org/kafka/2.8.0/kafka_2.13-2.8.0.tgz -o kafka.tgz
 RUN tar xzf kafka.tgz
-RUN mv kafka_2.13-2.8.0 /usr/local/kafka
+RUN cp -rf kafka_2.13-2.8.0 /usr/local/kafka
 RUN /bin/rm -rf kafka*
 ENV PATH="${PATH}:/usr/local/kafka/bin"
-
-
-# ffmpeg
-RUN apt-get -yqq update && \
-    apt-get install -yq ffmpeg
 
 ## docker
 RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
@@ -131,26 +103,14 @@ RUN curl https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-ubuntu2004-5.0.2.
 RUN tar xzf mongodb-database-tools.tgz
 RUN tar xzf mongodb.tgz
 RUN mkdir -p /usr/local/mongodb/bin/
-RUN mv mongodb-database-tools-ubuntu2004-x86_64-100.5.0/bin/* /usr/local/mongodb/bin/
-RUN mv mongodb-linux-x86_64-ubuntu2004-5.0.2/bin/* /usr/local/mongodb/bin/
-RUN /bin/rm -rf mongodb*
+RUN cp -rf mongodb-database-tools-ubuntu2004-x86_64-100.5.0/bin/* /usr/local/mongodb/bin/
+RUN cp -rf mongodb-linux-x86_64-ubuntu2004-5.0.2/bin/* /usr/local/mongodb/bin/
 ENV PATH="${PATH}:/usr/local/mongodb/bin"
-
-# pytorch
-RUN pip3 --no-cache-dir install torch torchvision
-
-# cqlsh
-RUN pip3 --no-cache-dir install cqlsh
-
-# clean
-RUN apt-get autoremove -y && \
-    apt-get clean -y
 
 # Pulsar
 RUN curl https://archive.apache.org/dist/pulsar/pulsar-2.8.0/apache-pulsar-2.8.0-bin.tar.gz -o apache-pulsar.tar.gz
 RUN tar xzf apache-pulsar.tar.gz
-RUN mv apache-pulsar-2.8.0 /usr/local/pulsar
-RUN /bin/rm -rf pulsar*
+RUN cp -rf apache-pulsar-2.8.0 /usr/local/pulsar
 ENV PATH="${PATH}:/usr/local/pulsar/bin"
 
 # tools
@@ -177,7 +137,7 @@ RUN rm -rf /root/.cache
 
 # clean
 RUN apt-get autoremove -y && \
-    apt-get clean -y
+    apt-get clean -y \
 
 WORKDIR /app/
 RUN mkdir -p /app/www
