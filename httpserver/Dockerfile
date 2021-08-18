@@ -167,6 +167,7 @@ RUN rm -rf /go/pkg/
 # zsh
 RUN chsh -s /usr/bin/zsh
 RUN echo 'alias ls="ls --color=auto"\nexport DOCKER_HOST=tcp://127.0.0.1:2375\nexport PATH=${PATH}:/go/bin:/usr/local/go/bin:/usr/local/nodejs/bin:/usr/local/kafka/bin:/usr/local/mongodb/bin:/usr/local/pulsar/bin\nexport GOPROXY=https://goproxy.io' >> /root/.zshrc
+RUN echo 'alias db="docker build --network host --tag"' >> /root/.zshrc
 #RUN apt -y --purge --allow-remove-essential remove bash
 #RUN ln -s /usr/bin/zsh  /usr/bin/bash
 #RUN rm -f /root/.bashrc
