@@ -29,8 +29,13 @@ RUN pip3 --no-cache-dir install cqlsh
 # shadowsocks
 RUN apt install -y shadowsocks-libev
 
-# TensorFlow
+# postgres
+RUN curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
+RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" | tee  /etc/apt/sources.list.d/pgdg.list
+RUN apt update
+RUN apt install -y postgresql-13 postgresql-client-13
 
+# TensorFlow
 RUN pip3 --no-cache-dir install -U virtualenv
 RUN pip3 --no-cache-dir install --upgrade setuptools
 RUN pip3 --no-cache-dir install --upgrade tensorflow
@@ -138,8 +143,7 @@ RUN rm -rf /tmp/*
 RUN rm -rf /root/.cache
 
 # clean
-RUN apt-get autoremove -y && \
-    apt-get clean -y \
+RUN apt-get autoremove -y && apt-get clean -y
 
 WORKDIR /app/
 RUN mkdir -p /app/www
