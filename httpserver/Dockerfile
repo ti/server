@@ -31,7 +31,7 @@ RUN apt-get -yqq update && \
     jq \
     apt-transport-https \
     gnupg-agent \
-    libreadline-gplv2-dev libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev zlib1g-dev && \
+    libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev zlib1g-dev && \
     apt-get autoremove -y && \
     apt-get clean -y
 
