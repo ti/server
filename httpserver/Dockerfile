@@ -81,9 +81,9 @@ RUN curl -L "https://storage.googleapis.com/kubernetes-release/release/$(curl -s
 RUN chmod +x /usr/local/bin/kubectl
 
 # nodejs
-RUN curl https://nodejs.org/dist/v14.17.5/node-v14.17.5-linux-x64.tar.xz -o node.tar.xz
+RUN curl https://nodejs.org/dist/v16.8.0/node-v16.8.0-linux-x64.tar.xz -o node.tar.xz
 RUN tar -xJvf node.tar.xz
-RUN mv node-v14.17.5-linux-x64 /usr/local/nodejs
+RUN mv node-v16.8.0-linux-x64 /usr/local/nodejs
 ENV PATH="${PATH}:/usr/local/nodejs/bin"
 RUN npm install --global yarn
 RUN npm install --global typescript
