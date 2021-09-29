@@ -43,6 +43,12 @@ RUN apt install -y docker-ce docker-ce-cli containerd.io
 RUN curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-Linux-x86_64 -o /usr/local/bin/docker-compose
 RUN chmod +x /usr/local/bin/docker-compose
 
+## clickhouse
+apt install apt-transport-https ca-certificates dirmngr
+apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E0C56BD4
+echo "deb https://repo.clickhouse.tech/deb/stable/ main/" | tee /etc/apt/sources.list.d/clickhouse.list
+apt update
+apt install -y clickhouse-server clickhouse-client
 
 # TensorFlow
 RUN pip3 --no-cache-dir install -U virtualenv
