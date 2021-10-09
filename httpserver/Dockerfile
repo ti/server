@@ -95,9 +95,9 @@ RUN npm install --global yarn
 RUN npm install --global typescript
 
 # kafka
-RUN curl https://downloads.apache.org/kafka/2.8.0/kafka_2.13-2.8.0.tgz -o kafka.tgz
+RUN curl https://downloads.apache.org/kafka/3.0.0/kafka_2.13-3.0.0.tgz -o kafka.tgz
 RUN tar xzf kafka.tgz
-RUN mv kafka_2.13-2.8.0 /usr/local/kafka
+RUN mv kafka_2.13-3.0.0 /usr/local/kafka
 RUN /bin/rm -rf kafka*
 ENV PATH="${PATH}:/usr/local/kafka/bin"
 
