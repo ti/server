@@ -1,7 +1,7 @@
 FROM ubuntu:20.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt -yqq update && \
-    apt install -y traceroute \
+    apt install -y traceroute qemu-system-aarch64 \
     python3-dev python3-pip \
     software-properties-common openssh-server \
     autoconf build-essential cmake pkg-config libcurl4-gnutls-dev libxml2-dev libssl-dev automake libev-dev libtool libsodium-dev \
