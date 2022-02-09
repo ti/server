@@ -1,8 +1,8 @@
 FROM ubuntu:20.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt -yqq update && \
-    apt install -y traceroute gcc-arm-linux-gnueabihf libc6-dev-armhf-cross qemu-user-static \
-    python3-dev python3-pip \
+    apt install -y --no-install-recommends qemu-user-static binfmt-support \
+    python3-dev python3-pip traceroute \
     software-properties-common openssh-server \
     autoconf build-essential cmake pkg-config libcurl4-gnutls-dev libxml2-dev libssl-dev automake libev-dev libtool libsodium-dev \
     dnsutils apt-utils tree nfs-common mtr-tiny iputils-ping netcat-openbsd wget zip unzip telnet curl zsh powerline fonts-powerline htop \
@@ -36,6 +36,7 @@ RUN apt update
 RUN apt install -y postgresql-13 postgresql-client-13
 
 ## docker
+RUN update-binfmts --enable qemu-arm && update-binfmts --display qemu-arm
 RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
 RUN add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
 RUN apt update
