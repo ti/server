@@ -23,15 +23,10 @@ RUN apt-get install -yq ffmpeg
 # pytorch
 RUN pip3 --no-cache-dir install torch torchvision
 
-# cqlsh
-RUN pip3 --no-cache-dir install cqlsh
-
-# shadowsocks
-RUN apt install -y shadowsocks-libev
 
 # postgres
 RUN curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
-RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" | tee  /etc/apt/sources.list.d/pgdg.list
+RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ impish-pgdg main" | tee  /etc/apt/sources.list.d/pgdg.list
 RUN apt update
 RUN apt install -y postgresql-14 postgresql-client-14
 
@@ -47,7 +42,7 @@ ENV PATH=${PATH}:/usr/local/mongodb/bin
 ## docker
 RUN update-binfmts --enable qemu-arm && update-binfmts --display qemu-arm
 RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
-RUN add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+RUN add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu impish stable"
 RUN apt update
 RUN apt install -y docker-ce docker-ce-cli containerd.io
 
