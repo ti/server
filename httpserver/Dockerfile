@@ -23,27 +23,25 @@ RUN apt-get install -yq ffmpeg
 # pytorch
 RUN pip3 --no-cache-dir install torch torchvision
 
-
 # postgres
 RUN curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
-RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ impish-pgdg main" | tee  /etc/apt/sources.list.d/pgdg.list
+RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" | tee  /etc/apt/sources.list.d/pgdg.list
 RUN apt update
 RUN apt install -y postgresql-14 postgresql-client-14
 
 # mongodb
-RUN ARCH=x86_64 && ARCHX=x86_64&& if [[ $(arch) == *"aarch64"* ]] ;then ARCH=arm64 && ARCHX=aarch64; fi && \
-    curl https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2004-${ARCH}-100.5.2.tgz -o mongodb-database-tools.tgz && \
-    curl https://fastdl.mongodb.org/linux/mongodb-linux-${ARCHX}-ubuntu2004-5.0.6.tgz -o mongodb.tgz && \
-    tar xzf mongodb-database-tools.tgz && tar xzf mongodb.tgz && mkdir -p /usr/local/mongodb/bin/ && \
-    mv mongodb-database-tools-ubuntu2004-${ARCH}-100.5.2/bin/* /usr/local/mongodb/bin/ && \
-    mv mongodb-linux-${ARCHX}-ubuntu2004-5.0.6/bin/* /usr/local/mongodb/bin/
+RUN curl https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2004-$(dpkg --print-architecture)-100.5.2.tgz -o mongodb-database-tools.tgz \
+RUN curl https://fastdl.mongodb.org/linux/mongodb-linux-$(arch)-ubuntu2004-5.0.6.tgz -o mongodb.tgz
+RUN tar xzf mongodb-database-tools.tgz && tar xzf mongodb.tgz && mkdir -p /usr/local/mongodb/bin/
+RUN mv mongodb-database-tools-ubuntu2004-$(dpkg --print-architecture)-100.5.2/bin/* /usr/local/mongodb/bin/
+RUN mv mongodb-linux-$(arch)-ubuntu2004-5.0.6/bin/* /usr/local/mongodb/bin/
 ENV PATH=${PATH}:/usr/local/mongodb/bin
 
 ## docker
-## use docker run --rm --privileged docker/binfmt:a7996909642ee92942dcd6cff44b9b95f08dad64 to run arm 
+## use docker run --rm --privileged docker/binfmt:a7996909642ee92942dcd6cff44b9b95f08dad64 to run arm
 RUN update-binfmts --enable qemu-arm && update-binfmts --display qemu-arm
-RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
-RUN add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu impish stable"
+RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list
 RUN apt update
 RUN apt install -y docker-ce docker-ce-cli containerd.io
 
@@ -66,10 +64,9 @@ RUN virtualenv --system-site-packages -p python3 /tf/venv
 WORKDIR /tmp/
 
 # helm
-RUN ARCH=amd64 && if [[ $(arch) == *"aarch64"* ]] ;then ARCH=arm64; fi && \
-    curl https://get.helm.sh/helm-v3.8.0-linux-${ARCH}.tar.gz -o helm.tar.gz
+RUN curl https://get.helm.sh/helm-v3.8.0-linux-$(dpkg --print-architecture).tar.gz -o helm.tar.gz
 RUN tar -xzf helm.tar.gz
-RUN cp linux-amd64/helm /usr/local/bin/
+RUN cp linux-$(dpkg --print-architecture)/helm /usr/local/bin/
 
 # v2ray
 RUN curl -O https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install-release.sh
@@ -77,8 +74,7 @@ RUN bash install-release.sh
 RUN rm install-release.sh
 
 # go
-RUN ARCH=amd64 && if [[ $(arch) == *"aarch64"* ]] ;then ARCH=arm64; fi && \
-    curl https://dl.google.com/go/go1.17.6.linux-${ARCH}.tar.gz -o go.tar.gz
+RUN curl https://dl.google.com/go/go1.17.6.linux-$(dpkg --print-architecture).tar.gz -o go.tar.gz
 RUN tar -C /usr/local -xzf go.tar.gz
 RUN mkdir -p /go/bin
 ENV PATH="${PATH}:/go/bin:/usr/local/go/bin"
@@ -89,15 +85,13 @@ ENV GOOS=linux
 ENV GO111MODULE=on
 
 # kubenetes
-RUN ARCH=amd64 && if [[ $(arch) == *"aarch64"* ]] ;then ARCH=arm64; fi && \
-    curl -L "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/${ARCH}/kubectl" -o /usr/local/bin/kubectl
+RUN curl -L "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/$(dpkg --print-architecture)/kubectl" -o /usr/local/bin/kubectl
 RUN chmod +x /usr/local/bin/kubectl
 
 # nodejs
-RUN ARCH=x64 && if [[ $(arch) == *"aarch64"* ]] ;then ARCH=arm64; fi && \
-    curl https://nodejs.org/dist/v17.4.0/node-v17.4.0-linux-${ARCH}.tar.xz -o node.tar.xz && \
-    tar -xJvf node.tar.xz && \
-    mv node-v17.4.0-linux-${ARCH} /usr/local/nodejs
+RUN curl https://nodejs.org/dist/v17.4.0/node-v17.4.0-linux-$(dpkg --print-architecture).tar.xz -o node.tar.xz
+RUN tar -xJvf node.tar.xz
+RUN mv node-v17.4.0-linux-$(dpkg --print-architecture) /usr/local/nodejs
 ENV PATH="${PATH}:/usr/local/nodejs/bin"
 RUN npm install --global yarn
 RUN npm install --global typescript
