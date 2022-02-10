@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt -yqq update && \
     apt install -y --no-install-recommends qemu-user-static binfmt-support \
@@ -33,7 +33,16 @@ RUN apt install -y shadowsocks-libev
 RUN curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
 RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" | tee  /etc/apt/sources.list.d/pgdg.list
 RUN apt update
-RUN apt install -y postgresql-13 postgresql-client-13
+RUN apt install -y postgresql-14 postgresql-client-14
+
+# mongodb
+RUN ARCH=x86_64 && ARCHX=x86_64&& if [[ $(arch) == *"aarch64"* ]] ;then ARCH=arm64 && ARCHX=aarch64; fi && \
+    curl https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2004-${ARCH}-100.5.2.tgz -o mongodb-database-tools.tgz && \
+    curl https://fastdl.mongodb.org/linux/mongodb-linux-${ARCHX}-ubuntu2004-5.0.6.tgz -o mongodb.tgz && \
+    tar xzf mongodb-database-tools.tgz && tar xzf mongodb.tgz && mkdir -p /usr/local/mongodb/bin/ && \
+    mv mongodb-database-tools-ubuntu2004-${ARCH}-100.5.2/bin/* /usr/local/mongodb/bin/ && \
+    mv mongodb-linux-${ARCHX}-ubuntu2004-5.0.6/bin/* /usr/local/mongodb/bin/
+ENV PATH=${PATH}:/usr/local/mongodb/bin
 
 ## docker
 RUN update-binfmts --enable qemu-arm && update-binfmts --display qemu-arm
@@ -61,7 +70,8 @@ RUN virtualenv --system-site-packages -p python3 /tf/venv
 WORKDIR /tmp/
 
 # helm
-RUN curl https://get.helm.sh/helm-v3.6.3-linux-amd64.tar.gz -o helm.tar.gz
+RUN ARCH=amd64 && if [[ $(arch) == *"aarch64"* ]] ;then ARCH=arm64; fi && \
+    curl https://get.helm.sh/helm-v3.8.0-linux-${ARCH}.tar.gz -o helm.tar.gz
 RUN tar -xzf helm.tar.gz
 RUN cp linux-amd64/helm /usr/local/bin/
 
@@ -71,7 +81,8 @@ RUN bash install-release.sh
 RUN rm install-release.sh
 
 # go
-RUN curl https://dl.google.com/go/go1.17.linux-amd64.tar.gz -o go.tar.gz
+RUN ARCH=amd64 && if [[ $(arch) == *"aarch64"* ]] ;then ARCH=arm64; fi && \
+    curl https://dl.google.com/go/go1.17.6.linux-${ARCH}.tar.gz -o go.tar.gz
 RUN tar -C /usr/local -xzf go.tar.gz
 RUN mkdir -p /go/bin
 ENV PATH="${PATH}:/go/bin:/usr/local/go/bin"
@@ -82,21 +93,23 @@ ENV GOOS=linux
 ENV GO111MODULE=on
 
 # kubenetes
-RUN curl -L "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" -o /usr/local/bin/kubectl
+RUN ARCH=amd64 && if [[ $(arch) == *"aarch64"* ]] ;then ARCH=arm64; fi && \
+    curl -L "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/${ARCH}/kubectl" -o /usr/local/bin/kubectl
 RUN chmod +x /usr/local/bin/kubectl
 
 # nodejs
-RUN curl https://nodejs.org/dist/v16.8.0/node-v16.8.0-linux-x64.tar.xz -o node.tar.xz
-RUN tar -xJvf node.tar.xz
-RUN mv node-v16.8.0-linux-x64 /usr/local/nodejs
+RUN ARCH=x64 && if [[ $(arch) == *"aarch64"* ]] ;then ARCH=arm64; fi && \
+    curl https://nodejs.org/dist/v17.4.0/node-v17.4.0-linux-${ARCH}.tar.xz -o node.tar.xz && \
+    tar -xJvf node.tar.xz && \
+    mv node-v17.4.0-linux-${ARCH} /usr/local/nodejs
 ENV PATH="${PATH}:/usr/local/nodejs/bin"
 RUN npm install --global yarn
 RUN npm install --global typescript
 
 # kafka
-RUN curl https://downloads.apache.org/kafka/3.0.0/kafka_2.13-3.0.0.tgz -o kafka.tgz
+RUN curl https://downloads.apache.org/kafka/3.1.0/kafka_2.13-3.1.0.tgz -o kafka.tgz
 RUN tar xzf kafka.tgz
-RUN mv kafka_2.13-3.0.0 /usr/local/kafka
+RUN mv kafka_2.13-3.1.0 /usr/local/kafka
 RUN /bin/rm -rf kafka*
 ENV PATH="${PATH}:/usr/local/kafka/bin"
 
@@ -116,22 +129,6 @@ RUN echo a077cb587a1b622e03aa4bf2f3689de14658a9497a9af2c427bba5f4cc3c4723 /usr/s
 RUN echo "deb [arch=amd64 signed-by=/usr/share/keyrings/getenvoy-keyring.gpg] https://deb.dl.getenvoy.io/public/deb/ubuntu $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/getenvoy.list
 RUN apt update
 RUN apt install -y getenvoy-envoy
-
-# mongodb
-RUN curl https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2004-x86_64-100.5.0.tgz -o mongodb-database-tools.tgz
-RUN curl https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-ubuntu2004-5.0.2.tgz -o mongodb.tgz
-RUN tar xzf mongodb-database-tools.tgz
-RUN tar xzf mongodb.tgz
-RUN mkdir -p /usr/local/mongodb/bin/
-RUN mv mongodb-database-tools-ubuntu2004-x86_64-100.5.0/bin/* /usr/local/mongodb/bin/
-RUN mv mongodb-linux-x86_64-ubuntu2004-5.0.2/bin/* /usr/local/mongodb/bin/
-ENV PATH="${PATH}:/usr/local/mongodb/bin"
-
-# Pulsar
-RUN curl https://archive.apache.org/dist/pulsar/pulsar-2.8.0/apache-pulsar-2.8.0-bin.tar.gz -o apache-pulsar.tar.gz
-RUN tar xzf apache-pulsar.tar.gz
-RUN mv apache-pulsar-2.8.0 /usr/local/pulsar
-ENV PATH="${PATH}:/usr/local/pulsar/bin"
 
 # tools
 ENV GOPROXY=https://goproxy.io
