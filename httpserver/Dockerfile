@@ -40,6 +40,7 @@ RUN ARCH=x86_64 && ARCHX=x86_64&& if [[ $(arch) == *"aarch64"* ]] ;then ARCH=arm
 ENV PATH=${PATH}:/usr/local/mongodb/bin
 
 ## docker
+## use docker run --rm --privileged docker/binfmt:a7996909642ee92942dcd6cff44b9b95f08dad64 to run arm 
 RUN update-binfmts --enable qemu-arm && update-binfmts --display qemu-arm
 RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
 RUN add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu impish stable"
