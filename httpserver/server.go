@@ -666,7 +666,33 @@ func httpClientCheck(w http.ResponseWriter, r *http.Request) {
 	w.Write(buf)
 }
 
+
 func upload(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		uploadPost(w, r)
+		return
+	}
+	uploadHTML := fmt.Sprintf(`<html lang="en">
+	<head>
+	  <meta charset="UTF-8" />
+	  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+	  <title>Document</title>
+	</head>
+	<body>
+	  <form
+		enctype="multipart/form-data"
+		action="/_upload%s"
+		method="post"
+	  >
+		<input type="file" name="file" />
+		<input type="submit" value="upload" />
+	  </form>
+	</body>
+  </html>`, r.URL.Path)
+	w.Write([]byte(uploadHTML))
+}
+func uploadPost(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseMultipartForm(500 << 20)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
